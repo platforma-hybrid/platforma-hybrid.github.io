@@ -234,9 +234,7 @@ function sealed() {
 if (!key) {
   // Без открытки: только тёмные врата и Стражник.
   show("gate"); dots.textContent = "";
-  panel.innerHTML = `<div class="inner"><div class="who">Стражник врат</div><h1>Врата закрыты</h1><div class="body"><p>Без зова их не открыть. Ступай с миром.</p></div><p id="why" style="margin-top:14px;font-size:11px;color:#6d6452;word-break:break-all"></p></div>`;
-  // Для проверки хранителем: что пришло от Telegram (без ключей и данных человека).
-  $("why").textContent = "· sp=" + JSON.stringify((tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || null) + " · v=" + ((tg && tg.version) || "нет") + " · q=" + [...new URLSearchParams(location.search).keys(), ...new URLSearchParams(location.hash.slice(1)).keys()].join(",");
+  panel.innerHTML = `<div class="inner"><div class="who">Стражник врат</div><h1>Врата закрыты</h1><div class="body"><p>Без зова их не открыть. Ступай с миром.</p></div></div>`;
 } else render();
 // Подгрузить ролики заранее, чтобы переходы шли без пауз.
 ["vision-1","vision-2","vision-3","vision-4","hand","open"].forEach((m) => { const l = document.createElement("link"); l.rel = "prefetch"; l.href = "" + m + ".mp4"; document.head.appendChild(l); });
