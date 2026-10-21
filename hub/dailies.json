@@ -1,5 +1,5 @@
 {
-  "note": "Ежедневные задания v0.2 — библиотека заданий и стартовые значения. Пока без сервера: прогресс хранится в браузере (localStorage). Спецификация: claude/SPEC_DAILIES.md. attr: strength | endurance | order | morality | dev (атрибут в разработке: без награды, отметить нельзя).",
+  "note": "Ежедневные задания v0.2 — библиотека заданий и стартовые значения. Пока без сервера: прогресс хранится в браузере (localStorage). Спецификация: claude/SPEC_DAILIES.md. attr: strength | endurance | order | morality | calm | dev (атрибут в разработке: без награды, отметить нельзя).",
   "reward": 5,
   "flaskMax": 100,
   "flasks": [
@@ -7,7 +7,8 @@
     "strength",
     "endurance",
     "order",
-    "morality"
+    "morality",
+    "calm"
   ],
   "start": {
     "wallet": 0,
@@ -29,6 +30,10 @@
         "progress": 0
       },
       "morality": {
+        "level": 0,
+        "progress": 0
+      },
+      "calm": {
         "level": 0,
         "progress": 0
       }
@@ -86,6 +91,16 @@
           "attr": "order"
         },
         {
+          "id": "sleep",
+          "name": "Лечь до полуночи",
+          "attr": "calm"
+        },
+        {
+          "id": "no-screen",
+          "name": "Час без экрана перед сном",
+          "attr": "calm"
+        },
+        {
           "id": "cook",
           "name": "Приготовить еду",
           "attr": "dev"
@@ -114,7 +129,7 @@
         {
           "id": "walk",
           "name": "Прогулка 30 минут",
-          "attr": "dev"
+          "attr": "calm"
         }
       ]
     },

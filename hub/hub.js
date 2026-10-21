@@ -5,7 +5,7 @@
 import { createKolo, monthStats } from "./kolo.js";
 import { initQuests } from "./quests.js";
 import { initAchievements } from "./achievements.js";
-import { initStats } from "./stats.js";
+import { initStats, powersBalance } from "./stats.js";
 import { initSkills } from "./skills.js";
 import { initPhone } from "./phone.js";
 
@@ -465,12 +465,13 @@ function rollDay(state, data) {
     const attr = taskAttr(data, id);
     if (attr) attrs[attr] = (attrs[attr] ?? 0) + 1;
   }
-  state.history.push({ day: state.day, done: state.done.length, ids: [...state.done], attrs, spent: state.bought.reduce((sum, b) => sum + b.price, 0), closedBy: state.closed ? "player" : "midnight" });
+  state.history.push({ day: state.day, done: state.done.length, ids: [...state.done], attrs, spent: state.bought.reduce((sum, b) => sum + b.price, 0), closedBy: state.closed ? "player" : "midnight", ...(state.willBonus ? { willBonus: state.willBonus } : {}) });
   state.history = state.history.slice(-400);
   state.day = todayKey();
   state.done = [];
   state.bought = [];
   state.closed = false;
+  state.willBonus = 0;
   return true;
 }
 
@@ -619,6 +620,16 @@ function createDailies(box, ctx) {
     if (state.closed) return;
     state.closed = true;
     toast(`${t.dayClosed}: ${state.done.length} ${t.of} ${total}`);
+    // «Силы» v2: сдал день в равновесии — Воля держит центр, прибавка к Воле (stats.json → balance.willBonus)
+    if (ctx.stats?.balance && state.done.length) {
+      const bal = powersBalance(ctx.stats, state.flasks, max);
+      if (bal.balanced) {
+        const bonus = Math.max(1, Math.round(state.done.length * reward * (ctx.stats.balance.willBonus ?? 0.1)));
+        addFlask("will", bonus);
+        state.willBonus = bonus;
+        window.setTimeout(() => toast(t.willBonus.replace("{n}", String(bonus))), 1600);
+      }
+    }
     commit();
     document.dispatchEvent(new CustomEvent("hub:day-closed", { detail: { by: "player" } }));
   });
@@ -633,6 +644,8 @@ function createDailies(box, ctx) {
   reopen.addEventListener("click", () => {
     if (!state.closed) return;
     state.closed = false;
+    if (state.willBonus) addFlask("will", -state.willBonus);
+    state.willBonus = 0;
     toast(t.adminReopened);
     commit();
   });
@@ -659,6 +672,7 @@ function createDailies(box, ctx) {
     state.wallet = data.start.wallet;
     state.earned = 0;
     state.flasks = freshFlasks(data);
+    state.willBonus = 0;
     state.done = [];
     state.bought = [];
     state.closed = false;

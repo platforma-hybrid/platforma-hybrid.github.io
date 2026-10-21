@@ -10,7 +10,7 @@ const MONTHS = 13; // 12 по 30 дней + короткий 13-й
 export const MONTH_DAYS = 30; // 3 недели по 10 дней
 export const WEEK_DAYS = 10;
 const TZ_MS = 3 * 3_600_000; // время равноденствия — по Москве (Крым)
-const ATTR_COLORS = { strength: "#ff5a3a", endurance: "#2fe0a8", order: "#a98bff", morality: "#5ab4ff", will: "#ffb347" };
+const ATTR_COLORS = { strength: "#ff5a3a", endurance: "#2fe0a8", order: "#a98bff", morality: "#5ab4ff", calm: "#c9d6ff", will: "#ffb347" };
 
 // ---------- календарь коло ----------
 
@@ -650,7 +650,7 @@ export function monthStats(month, d, { texts, character }) {
   // атрибуты за месяц (жёлтые траты — скрыты: решение автора 04.10)
   const sums = {};
   for (const x of days) for (const [k, v] of Object.entries(x.attrs ?? {})) sums[k] = (sums[k] ?? 0) + v;
-  const keys = ["strength", "endurance", "order", "morality"];
+  const keys = ["strength", "endurance", "order", "morality", "calm"];
   const max = Math.max(1, ...keys.map((k) => sums[k] ?? 0));
   const bars = el("div", "ks-bars");
   for (const k of keys) {

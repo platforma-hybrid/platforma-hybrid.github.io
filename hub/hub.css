@@ -24,8 +24,9 @@ html, body {
   font-family: var(--font-text);
 }
 
+/* fixed, а не absolute: сцена шире экрана телефона, и телефон иначе «отдаляет» страницу (окна вылезали за экран) */
 #stage {
-  position: absolute;
+  position: fixed;
   left: 50%;
   top: 50%;
   overflow: hidden;
@@ -676,7 +677,9 @@ button:focus-visible, .item[data-action]:focus-visible {
   display: grid; place-items: center;
 }
 .dailies-task input:checked { background: #4fd06a; }
-.dailies-task input:checked::after { content: "✓"; color: #0d2a13; font-weight: 700; font-size: 22px; }
+/* галочка нарисована рамкой: всегда по центру квадрата и в масштабе его размера (символ ✓ съезжал в маленьких квадратах) */
+.dailies-task input:checked::after { content: ""; width: 28%; height: 55%; box-sizing: border-box; margin-top: -12%;
+  border: solid #0d2a13; border-width: 0 var(--tick-w, 3px) var(--tick-w, 3px) 0; transform: rotate(45deg); }
 .dailies-task input:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .dailies-task-name { flex: 1; min-width: 0; }
 .dailies-task.done .dailies-task-name { color: #9c8c6c; text-decoration: line-through; }
@@ -684,6 +687,7 @@ button:focus-visible, .item[data-action]:focus-visible {
 .dailies-tag { flex: none; font-size: 16px; padding: 2px 10px; border-radius: 12px; border: 1px solid; }
 .dailies-tag.tag-strength { color: #ffb38a; border-color: #a03a16; }
 .dailies-tag.tag-endurance { color: #9ff0d0; border-color: #1d7a58; }
+.dailies-tag.tag-calm { color: #c9d6ff; border-color: #4a5a9a; }
 .dailies-add { margin-top: 10px; padding: 8px; text-align: center; font-size: 18px; color: #9c8c6c; border: 1px dashed rgba(236, 196, 116, 0.35); }
 
 .dailies-yellow { margin-top: 18px; padding: 14px 18px; background: rgba(40, 26, 6, 0.85); border: 1px solid #8a6a1c; }
@@ -1038,8 +1042,8 @@ label.qb-row { cursor: pointer; }
   grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #c9953e transparent; }
 .modal-quests .in-quests .dailies-col { padding: 4px 12px 6px; background: rgba(16, 14, 11, 0.9); border: 1px solid rgba(201, 149, 62, 0.35); border-radius: 6px; }
 .modal-quests .in-quests .dailies-col h3 { margin: 2px 0 2px; font-size: 20px; }
-.modal-quests .in-quests .dailies-task { padding: 2px 2px; gap: 10px; font-size: 18px; }
-.modal-quests .in-quests .dailies-task input { width: 18px; height: 18px; }
+.modal-quests .in-quests .dailies-task { padding: 2px 2px; gap: 10px; font-size: 20px; }
+.modal-quests .in-quests .dailies-task input { width: 22px; height: 22px; --tick-w: 2.5px; }
 .modal-quests .in-quests .dailies-tag { font-size: 12px; padding: 1px 8px; }
 .modal-quests .in-quests .dailies-add { display: none; } /* «+ своё задание — скоро»: на вкладке «День» не помещается, вернётся вместе с функцией */
 .modal-quests .in-quests .dailies-yellow { position: absolute; left: 300px; top: 840px; width: 690px; height: 72px; box-sizing: border-box; margin: 0; padding: 0 0 0 24px;
@@ -1058,7 +1062,7 @@ label.qb-row { cursor: pointer; }
 .modal-quests .in-quests .dailies-toast { top: 300px; }
 .modal-quests .in-quests .dailies-admin { position: absolute; left: 228px; top: 930px; margin: 0; padding: 0; border: 0; }
 /* на маленьком телефоне дела крупнее, доска листается */
-.ph-art-small .modal-quests .in-quests .dailies-task { font-size: 24px; }
+.ph-art-small .modal-quests .in-quests .dailies-task { font-size: 20px; padding: 0 2px; }
 .ph-art-small .modal-quests .in-quests .dailies-col h3 { font-size: 26px; }
 .ph-art-small .modal-quests .in-quests .dailies-tag { font-size: 16px; }
 .ph-art-small .modal-quests .in-quests .dailies-top .dailies-hint { font-size: 20px; }
@@ -1066,6 +1070,9 @@ label.qb-row { cursor: pointer; }
 .ph-art-small .modal-quests .in-quests .dailies-yellow h3 { display: none; }
 .ph-art-small .modal-quests .in-quests .dailies-submit { font-size: 28px; }
 .ph-art-small .modal-quests .qb-tab { font-size: 22px; }
+/* компьютер: окно «Задания» на ~30% меньше остальных картин (решение автора 21.10); телефон ниже задаёт свой размер */
+.wood.modal.modal-art.modal-quests { zoom: 0.68; }
+
 /* телефон: та же картина целиком, вписанная в экран (phone.js → --ph-art-zoom) */
 .ph-modal .wood.modal.modal-art { zoom: var(--ph-art-zoom, 0.5); width: 1536px; max-height: none; overflow: visible; padding: 0; }
 .ph-modal .wood.modal.modal-art h2 { font-size: 42px; margin: 0; }
@@ -1138,6 +1145,8 @@ body.no-anim .tour-hole, body.no-anim .tour-card { transition: none; animation: 
 .st-close { position: absolute; right: 18px; top: 18px; width: 46px; height: 46px; display: grid; place-items: center;
   border: 2px solid var(--gold-deep) !important; background: rgba(20, 18, 15, 0.8) !important; color: var(--gold) !important; }
 .st-close:hover { box-shadow: 0 0 14px rgba(243, 212, 138, 0.45); }
+/* крестик и «назад» — поверх дерева сил (дерево растянуто на всё окно и иначе перекрывает их) */
+.st-close, .st-back { z-index: 6; }
 
 /* корни */
 .st-tree { position: absolute; inset: 0; }
@@ -1745,3 +1754,128 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .st-phone .st-detail .st-deed-gain { font-size: 18px; }
 .st-phone .st-detail .st-deed-task { margin-top: 2px; font-size: 14px; }
 .st-phone .st-detail .st-deed-trust { display: none; }
+
+/* ===== Окно «Силы» v2 (21.10.2026): круг равновесия на фоне bg_powers, разбор — на bg_powers_detail ===== */
+.st-v2 { background: #14130f; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7); }
+.st-v2-bg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+.st-v2-bg[hidden], .st-main[hidden] { display: none; }
+.st-v2 .st-head { position: absolute; transform: none; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 0; margin: 0;
+  background: none; border: 0; box-shadow: none; }
+.st-v2 .st-title { font-size: 34px; line-height: 1; text-shadow: 0 2px 6px #000, 0 0 14px rgba(255, 190, 90, 0.35); }
+.st-v2 .st-dia { width: 8px; height: 8px; }
+.st-v2.st-detail-mode .st-dia { display: none; }
+.st-v2.st-detail-mode .st-title { font-size: 30px; }
+.st-v2 .st-close { right: auto; width: 46px; height: 46px; border-radius: 50%; border-color: transparent !important; background: rgba(14, 13, 11, 0.82) !important;
+  box-shadow: 0 0 0 3px rgba(14, 13, 11, 0.5); }
+.st-v2 .st-back { height: auto; padding: 0 !important; justify-content: center; background: none !important; border: 0 !important; box-shadow: none !important;
+  font-family: var(--font-title); font-size: 20px; color: var(--gold); text-shadow: 0 1px 3px #000; }
+.st-v2 .st-back:hover { color: #ffe2a0; }
+
+/* доска слева: выбранная сила и путь */
+.st-left { position: absolute; display: flex; flex-direction: column; gap: 12px; padding: 18px 24px 14px; box-sizing: border-box; overflow: hidden; }
+.st-v2 .st-selected { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.st-v2 .st-sel-name, .st-v2 .st-path-title { font-size: 32px; line-height: 36px; }
+.st-v2 .st-sel-group { font-size: 15px; }
+.st-v2 .st-sel-lvrow { margin-top: 6px; }
+.st-v2 .st-sel-lv { font-size: 48px; line-height: 48px; }
+.st-v2 .st-sel-sub { margin: 14px 0 3px; font-size: 21px; }
+.st-v2 .st-sel-text, .st-v2 .st-sel-list li { font-size: 17px; line-height: 23px; }
+.st-v2 .st-sel-note { margin: 8px 0 0; font-size: 14px; line-height: 19px; color: #b9a888; }
+.st-v2 .st-go { margin-top: auto !important; padding: 8px 14px !important; font-size: 20px !important; border: 2px solid var(--gold-deep) !important;
+  background: rgba(20, 18, 15, 0.6) !important; color: var(--gold) !important; font-family: var(--font-title) !important; }
+.st-v2 .st-path { border-top: 1px solid rgba(201, 149, 62, 0.45); padding-top: 8px; }
+.st-v2 .st-path-grid { gap: 2px 20px; margin-top: 4px; }
+.st-v2 .st-path-num { font-size: 28px; line-height: 32px; }
+.st-v2 .st-path-label { font-size: 15px; }
+.st-v2 .st-empty { font-size: 18px; line-height: 25px; }
+
+/* круг: форма, кольцо Воли, точка */
+.st-circle { position: absolute; inset: 0; pointer-events: none; }
+.st-circle-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.st-shape { fill: rgba(232, 194, 122, 0.2); stroke: #e8c27a; stroke-width: 2.5; stroke-linejoin: round; }
+.st-vert { fill: #f3d48a; }
+.st-core { fill: rgba(127, 216, 230, 0.07); }
+.st-core-line { fill: none; stroke: rgba(127, 216, 230, 0.6); stroke-width: 1.5; stroke-dasharray: 3 5; }
+.st-pull { stroke: #ff8a2a; stroke-width: 2; stroke-dasharray: 5 5; }
+.st-dot-glow { fill: #ffb347; opacity: 0.45; filter: blur(6px); }
+.st-dot-core { fill: #fff2c8; stroke: #ffb347; stroke-width: 2; }
+.st-dot.calm .st-dot-glow { fill: #7fd8e6; }
+.st-dot.calm .st-dot-core { stroke: #7fd8e6; }
+
+/* гнёзда со знаками и таблички с именами */
+.st-socket { position: absolute; width: 40px; height: 40px; transform: translate(-50%, -50%); border-radius: 50%; display: grid !important; place-items: center; }
+.st-socket .st-sym-art { filter: brightness(1) drop-shadow(0 1px 2px #000) !important; }
+.st-socket:hover, .st-socket.selected { box-shadow: 0 0 16px rgba(243, 212, 138, 0.75); }
+.st-socket:hover .st-sym-art, .st-socket.selected .st-sym-art { filter: brightness(1.15) drop-shadow(0 0 4px rgba(255, 200, 110, 0.8)) !important; }
+.st-plaque { position: absolute; display: flex !important; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; padding: 0 4px !important;
+  font-family: var(--font-title) !important; font-size: 17px; color: var(--gold) !important; text-shadow: 0 1px 3px #000; white-space: nowrap; letter-spacing: 0; }
+.st-plaque-n { font-size: 20px; color: #efe3c8; }
+.st-plaque.long { font-size: 15px; }
+.st-plaque:hover, .st-plaque.selected { color: #ffe2a0 !important; text-shadow: 0 0 10px rgba(255, 200, 110, 0.7), 0 1px 3px #000; }
+.st-plaque.selected { box-shadow: inset 0 0 0 2px rgba(243, 212, 138, 0.75); border-radius: 3px; }
+.st-plaque.dev, .st-socket.dev { opacity: 0.6; }
+.st-plaque.dev::after { content: "скоро"; font: 12px var(--font-text); color: #b9a888; }
+
+/* нижняя доска: Воля и строка равновесия */
+.st-state { position: absolute; display: flex; align-items: center; gap: 26px; padding: 6px 28px; box-sizing: border-box; }
+.st-state-will { flex: none; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 10px; cursor: help; }
+.st-state-will-name { font-family: var(--font-title); font-size: 22px; color: var(--gold); }
+.st-state-will-n { font-family: var(--font-title); font-size: 34px; color: #bfefff; text-shadow: 0 0 10px rgba(127, 216, 230, 0.7); }
+.st-state-ring { grid-column: 1 / -1; font-size: 13px; color: #9fd4de; }
+.st-state-msg { flex: 1; min-width: 0; border-left: 1px solid rgba(201, 149, 62, 0.45); padding-left: 22px; }
+.st-state-msg p { margin: 0; font-size: 17px; line-height: 1.35; }
+.st-state-msg .st-ok { color: #7fd8e6; }
+.st-state-msg .st-warn { color: #ffb070; }
+.st-state-msg .st-sub { font-size: 14px; color: #b9a888; margin-top: 2px; }
+.st-v2 .st-levelup { animation: st-v2-flash 1.4s ease; }
+@keyframes st-v2-flash { 0%, 100% { filter: none; } 30% { filter: brightness(1.8) drop-shadow(0 0 12px #ffd27a); } }
+
+/* разбор силы */
+.st-v2 .st-detail { position: absolute; inset: 0; display: block; }
+.st-v2 .st-detail[hidden] { display: none; }
+.st-d-medal { position: absolute; display: grid; place-items: center; border-radius: 50%; }
+.st-d-medal .st-sym-art { filter: brightness(1) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)) !important; }
+.st-d-left, .st-d-mid, .st-d-right { position: absolute; box-sizing: border-box; }
+.st-d-left { display: flex; flex-direction: column; gap: 6px; }
+.st-d-left .st-sel-lvrow { margin: 0; justify-content: space-between; align-items: baseline; }
+.st-d-left .st-sel-lv { font-size: 48px; line-height: 48px; }
+.st-d-left .st-sel-next { margin: 0; font-size: 15px; }
+.st-d-left .st-sel-barrow { margin-top: 2px; }
+.st-d-left .st-sel-sub { margin: 12px 0 4px; font-size: 19px; }
+.st-d-left .st-chart { display: flex; flex-direction: column; flex: none; }
+.st-d-left .st-chart-cols { min-height: 150px; flex: none; height: 150px; }
+.st-d-left .st-sums p { margin: 0; font-size: 15px; line-height: 22px; }
+.st-d-mid { display: flex; flex-direction: column; padding: 14px 18px 10px; }
+.st-d-mid .st-sel-sub { margin: 0 0 10px; font-size: 24px; }
+.st-d-mid .st-deed-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 6px; scrollbar-color: #7a5a2c transparent; }
+.st-d-mid .st-deed-list.st-more { -webkit-mask-image: linear-gradient(180deg, #000 85%, transparent); mask-image: linear-gradient(180deg, #000 85%, transparent); }
+.st-v2 .st-deed { background: rgba(0, 0, 0, 0.28); border-color: rgba(201, 149, 62, 0.45); padding: 10px 14px; }
+.st-d-right .st-sel-sub { position: absolute; left: 52px; right: 6px; top: 8px; margin: 0; font-size: 19px; line-height: 22px; }
+.st-rung2 { position: absolute; width: 0; height: 0; }
+.st-rung2-badge { position: absolute; left: -20px; top: -20px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--font-title); font-size: 18px; color: #b9a888; }
+.st-rung2.done .st-rung2-badge { color: #fff3d0; box-shadow: 0 0 12px rgba(79, 208, 106, 0.6); }
+.st-rung2.next .st-rung2-badge { color: #fff3d0; box-shadow: 0 0 16px rgba(255, 138, 42, 0.8); }
+.st-rung2-body { position: absolute; left: 30px; top: 0; transform: translateY(-50%); width: 172px; display: flex; flex-direction: column; gap: 1px; }
+.st-rung2 .st-rung-text { font-size: 15px; line-height: 18px; }
+.st-rung2 .st-rung-state { font-size: 12px; }
+.st-rung2.done .st-rung-state { color: #4fd06a; }
+.st-rung2.next .st-rung-state { color: var(--fire); }
+.st-rung2.empty { opacity: 0.4; }
+.st-rung2-none { position: absolute; left: 52px; right: 8px; top: 60px; font-size: 15px; }
+
+/* телефон лёжа: та же картина целиком, вписанная в экран; по краям — тот же фон, размытый */
+.st-backdrop.st-pp-bd { position: fixed; inset: 0; z-index: 2000; background: #070504; overflow: hidden; }
+.st-pp-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(8px) brightness(0.45); }
+.st-window.st-pp { position: absolute; }
+.st-pp-small .st-left { overflow-y: auto; }
+.st-pp-small .st-left > * { zoom: 1.3; flex: none; }
+.st-pp-small .st-plaque { font-size: 21px; }
+.st-pp-small .st-plaque.long { font-size: 16px; gap: 3px; }
+.st-pp-small .st-plaque.long .st-plaque-n { font-size: 19px; }
+.st-pp-small .st-plaque-n { font-size: 24px; }
+.st-pp-small .st-state-msg p { font-size: 23px; }
+.st-pp-small .st-state-msg .st-sub { display: none; }
+.st-pp-small .st-d-left > *, .st-pp-small .st-d-mid .st-deed-list { zoom: 1.25; }
+.st-pp-small .st-d-left { overflow-y: auto; }
+.st-pp-small .st-rung2 .st-rung-text { font-size: 19px; line-height: 22px; }
