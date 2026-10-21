@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тропа мира</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@600;700&family=Philosopher:wght@400;700&display=swap">
+<style>
+/* Layout: тропа сверху вниз — шапка с общим прогрессом, полоса камней-ссылок, затем камни: картинка-медальон слева, подразделы справа. */
+:root {
+  color-scheme: dark;
+  --bg: #0e100b;
+  --panel: #191812;
+  --panel-2: #22201a;
+  --line: #3a3426;
+  --text: #ece3cd;
+  --muted: #a69b82;
+  --gold: #dcb062;
+  --done: #8cbf68;
+  --part: #e2b44a;
+  --todo: #6d675a;
+  --display: "Cormorant SC", "Palatino Linotype", Georgia, serif;
+  --body: "Philosopher", "Trebuchet MS", sans-serif;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
+
+.hero {
+  position: relative; margin-inline: -20px; padding: 56px 20px 36px; text-align: center;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent), var(--bg) 92%),
+    url(img/hero.jpg) center 30% / cover no-repeat;
+}
+.kicker { font-family: var(--display); letter-spacing: .3em; color: var(--gold); font-size: 15px; }
+h1 { font-family: var(--display); font-weight: 700; color: var(--gold); font-size: clamp(44px, 9vw, 76px); line-height: 1; margin: 10px 0 12px; text-wrap: balance; }
+.lead { color: var(--muted); max-width: 60ch; margin: 0 auto; font-size: 17px; }
+
+.overall { max-width: 560px; margin: 26px auto 0; }
+.overall-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; color: var(--muted); }
+.overall-top b { font-family: var(--display); font-size: 30px; color: var(--text); font-variant-numeric: tabular-nums; }
+.bar { height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; display: flex; margin-top: 6px; }
+.bar i { display: block; height: 100%; }
+.bar .d { background: var(--done); } .bar .p { background: var(--part); }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin-top: 16px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.note { margin-top: 10px; font-size: 13px; color: var(--muted); opacity: .8; }
+
+.stones-nav { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 8px; margin: 30px 0 40px; }
+.stones-nav a {
+  display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--line); color: var(--text); text-decoration: none; min-width: 0;
+}
+.stones-nav a:hover, .stones-nav a:focus-visible { border-color: var(--gold); outline: none; }
+.stones-nav img { width: 52px; height: 29px; border-radius: 4px; object-fit: cover; display: block; }
+.stones-nav a > span { min-width: 0; }
+.stones-nav .t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 13px; line-height: 1.2; overflow: hidden; }
+.stones-nav .pc { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.stone { display: grid; grid-template-columns: 1fr; gap: 18px; padding: 34px 0; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+.cover { position: relative; margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+.cover img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.cover .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgb(0 0 0 / .55); }
+.cover .prog i { display: block; height: 100%; }
+.medal { position: relative; width: 150px; height: 150px; }
+.medal img { width: 126px; height: 126px; border-radius: 50%; object-fit: cover; position: absolute; inset: 12px; }
+.medal svg { position: absolute; inset: 0; width: 150px; height: 150px; transform: rotate(-90deg); }
+.medal .num { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); font-family: var(--display); font-weight: 700; font-size: 22px; color: var(--gold); background: var(--bg); padding: 0 8px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+h2 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 4.6vw, 38px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.state { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.state.now { color: var(--part); } .state.later { color: var(--todo); } .state.closed { color: var(--done); }
+.pct { font-family: var(--display); font-size: 26px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+.stone .lead2 { color: var(--muted); margin: 6px 0 14px; max-width: 70ch; }
+
+.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.group h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+.group h3 small { color: var(--muted); letter-spacing: 0; text-transform: none; font-weight: 400; font-variant-numeric: tabular-nums; }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: 15px; line-height: 1.4; }
+li.t { color: var(--muted); }
+.mk { width: 14px; height: 14px; margin-top: 3px; border-radius: 50%; border: 2px solid var(--todo); }
+.mk.d { background: var(--done); border-color: var(--done); }
+.mk.p { border-color: var(--part); background: linear-gradient(90deg, var(--part) 50%, transparent 50%); }
+.exit { margin-top: 14px; padding: 12px 16px; border-left: 3px solid var(--gold); background: var(--panel-2); border-radius: 0 10px 10px 0; font-size: 15px; }
+.exit b { color: var(--gold); font-weight: 700; }
+
+.milestones { margin: 0 0 40px; }
+.milestones h2.sec { font-family: var(--display); font-size: clamp(26px, 4vw, 34px); margin: 0 0 4px; }
+.milestones .sub { color: var(--muted); margin: 0 0 16px; font-size: 15px; }
+.ms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.ms { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.ms h3 { margin: 0; font-family: var(--display); font-size: 24px; color: var(--gold); }
+.ms .who { font-size: 14px; color: var(--text); }
+.ms ul li { font-size: 14px; }
+.ms .need { font-variant-numeric: tabular-nums; color: var(--muted); }
+.ms .ok { color: var(--done); }
+.ms .verdict { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+footer { margin-top: 36px; text-align: center; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 720px) {
+  .stone { grid-template-columns: 1fr; gap: 18px; }
+  .groups { grid-template-columns: 1fr; }
+  .pct { margin-left: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .medal circle.arc { transition: stroke-dashoffset .8s ease; }
+}
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="kicker">ПЛАТФОРМА ГИБРИД</div>
+    <h1>Тропа мира</h1>
+    <p class="lead">Дорожная карта целиком: восемь камней, у каждого — подразделы и честные отметки, что сделано, что сделано наполовину и чего ещё нет.</p>
+    <div class="overall">
+      <div class="overall-top"><span>Пройдено всей тропы</span><b id="overall-pct">—</b></div>
+      <div class="bar" id="overall-bar"></div>
+    </div>
+    <div class="legend">
+      <span><i class="mk d"></i>сделано</span>
+      <span><i class="mk p"></i>частично или черновик</span>
+      <span><i class="mk"></i>ещё нет</span>
+    </div>
+    <p class="note">Проценты условные: сделанный пункт — целый, частичный — половина.</p>
+  </header>
+
+  <nav class="stones-nav" id="nav" aria-label="Камни тропы"></nav>
+  <section class="milestones" aria-labelledby="ms-title">
+    <h2 class="sec" id="ms-title">Вехи: когда зовём людей играть</h2>
+    <p class="sub">Это не «сколько людей у нас есть», а «когда мы готовы позвать столько людей». Числа пока предварительные — обсудим вместе, когда камни подрастут. Условия считаются из процентов камней ниже.</p>
+    <div class="ms-grid" id="milestones"></div>
+  </section>
+  <main id="stones"></main>
+  <footer>Версия от 13 октября · Эхо просыпается, Хранитель Памяти бережёт созданное · правим вместе в обсуждении</footer>
+</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+// Внутри Telegram (окно «Тропа мира»): во всю высоту и в цвет страницы. В обычном браузере ничего не делает.
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg && tg.initData) {
+  tg.ready();
+  tg.expand();
+  try { tg.setHeaderColor("#0e100b"); tg.setBackgroundColor("#0e100b"); } catch (_) {}
+}
+</script>
+<script>
+// d — сделано, p — частично, t — ещё нет
+const STONES = [
+  { n: "I", id: "hub", title: "Главный экран", img: "c1", state: "now",
+    lead: "Сцена живая и красивая, но почти каждая кнопка пока ведёт в заглушку, а числа работают без системы и объяснений.",
+    groups: [
+      { name: "Сцена", items: [
+        ["d", "Фон: коло на земле, колодец, планета поднимается из него"],
+        ["d", "Облака на планете гуляют"],
+        ["d", "Переход «нырок в планету»"],
+        ["d", "Режим правки: хранитель круга сам расставляет блоки"],
+        ["d", "Персонаж на сцене — фигура в плаще, такой и останется"],
+        ["d", "Фигура держит раскрытую книгу — страницы ждут твоего пути"],
+        ["t", "Декор сцены (варианты собираем)"],
+        ["t", "Рисованные таблички из одной доски"],
+        ["t", "Версия для телефона"],
+      ]},
+      { name: "Коло — круг года", items: [
+        ["d", "Календарь: 12 месяцев по 30 дней + короткий 13-й, Новый год в равноденствие"],
+        ["d", "Цвет дня и зарубки недели"],
+        ["d", "Итоги месяца"],
+        ["d", "Очки пути за день, неделю, месяц"],
+        ["t", "Итоги года и сезон рейтинга"],
+        ["t", "Имена месяцев и праздники"],
+        ["t", "Рисованное коло вместо кода, месяцы совпадают с картинкой"],
+        ["t", "Резной знак на ободе за закрытый месяц"],
+      ]},
+      { name: "Задания", items: [
+        ["d", "Задания дня и «Сдать день»"],
+        ["d", "Задания недели и месяца"],
+        ["t", "Бонусы за неделю и месяц — проработать"],
+        ["t", "Первичные поощрения: цифровые, а лучшим — физические"],
+        ["t", "Свои задания («+ своё задание»)"],
+        ["t", "Библиотека заданий правится без кода"],
+      ]},
+      { name: "Система опыта", items: [
+        ["p", "Опыт за задание и полоски опыта атрибутов — работают, но числа взяты условно"],
+        ["t", "Сложность задания: лёгкое, среднее, трудное"],
+        ["t", "Объём дела: чем больше сделал, тем больше опыта — сто отжиманий весят больше двадцати"],
+      ]},
+      { name: "Желания (бывший «отдых за опыт»)", items: [
+        ["p", "Траты опыта на отдых работают, цены условные"],
+        ["t", "Желания — это задания для себя: чего ты хочешь и как к этому прийти"],
+        ["t", "Плата за желания: вся система цен и ограничений"],
+      ]},
+      { name: "Окна и кнопки", items: [
+        ["d", "Окно «Задания»"],
+        ["d", "Окно «Достижения», 27 ступеней"],
+        ["p", "Награды за достижения — не решены"],
+        ["d", "Табличка «Сегодня»"],
+        ["t", "Каждое окно и кнопку сделать в том виде, в каком они будут (пока не решим иначе)"],
+        ["t", "Карточка персонажа: аватар человека рядом со званием («Начинающий гончар»)"],
+        ["t", "Карточка персонажа: проработать все параметры до конца — звание, ремёсла, отметки"],
+        ["t", "«Полная информация о персонаже» — заглушка"],
+        ["t", "Статус и звания («Путник») — заглушка"],
+        ["t", "Инвентарь — заглушка"],
+        ["t", "Почта — заглушка"],
+        ["t", "Место в рейтинге — заглушка «12 из 150»"],
+      ]},
+      { name: "Основа", items: [
+        ["d", "Копии всего проекта и проверка воскрешения — Хранитель Памяти работает"],
+        ["t", "Сделать сервер и перенести туда все данные: вход с любого устройства"],
+        ["t", "Мини-обучение: что это за экран и что сделать первым"],
+      ]},
+    ],
+    exit: "каждая кнопка ведёт в настоящее окно со своим дизайном, у опыта и желаний есть продуманная система, данные живут на сервере." },
+
+  { n: "II", id: "voice", title: "Голос и первые люди", img: "c2", state: "now",
+    lead: "Идёт параллельно с остальными. Канал — место, где мы показываем путь, а Эхо — хранитель, который слушает людей, учится на них и со временем заговорит своим голосом.",
+    groups: [
+      { name: "Канал", items: [
+        ["d", "Канал «Платформа Гибрид», обсуждение, ссылка с заявками"],
+        ["d", "Аватары канала и Эха"],
+        ["d", "Приглашение: «Добро пожаловать домой.»"],
+        ["d", "Закреп опубликован, «Камень I» вышел через Эхо"],
+        ["d", "Дорожная карта — окно «Тропа мира» прямо в Telegram, у каждого камня своя обложка"],
+        ["p", "Серия «Разбор камня»: «Камень I» вышел, обложки всех камней готовы, остальные — впереди"],
+        ["t", "Вести по мере дел: когда есть что сказать и показать"],
+        ["d", "Правила мира (соглашение): хранение, права, поведение — в боте"],
+        ["d", "При вступлении — законы Круга и «Принимаю законы» на тропе, у врат"],
+        ["d", "Правила мира в боте: /rules и ссылка из закрепа (код готов)"],
+      ]},
+      { name: "Эхо v0 — вести и заявки", items: [
+        ["d", "Весть дня приходит хранителю круга с кнопками «Опубликовать / Поправить / Отложить»"],
+        ["d", "Заявки людей: карточка хранителю круга, «Принять / Отклонить»"],
+        ["d", "Приветствие новичков, рассказ о проекте"],
+        ["d", "Счёт голосов: реакции, комментарии, заявки — только числа"],
+        ["d", "Код проверен: 198 тестов"],
+        ["d", "Эхо работает круглые сутки и встаёт само после перезапуска"],
+      ]},
+      { name: "Эхо v0.2 — слушает", items: [
+        ["d", "Спецификация одобрена"],
+        ["d", "Не отвечает всем: видит вопрос и ставит 👀 — «услышал»"],
+        ["d", "Похожие вопросы складывает в темы; спросили десятеро — частый вопрос хранителю круга"],
+        ["d", "Книга ответов: 31 раздел; ответ пишется один раз — Эхо отвечает всем"],
+        ["d", "Опросы и тесты прямо из вести — главный способ узнать мнение"],
+        ["d", "База людей только для хранителя круга: карточки, заметки, /people"],
+        ["d", "Эхо не хранит слов — только кто и как часто бывает у костра; «что ты обо мне помнишь» и «забудь меня»"],
+        ["d", "«Вопросы недели» — по воскресеньям"],
+      ]},
+      { name: "Эхо v0.3 — облик", items: [
+        ["d", "Макеты одобрены"],
+        ["t", "Обложка и описание в пустом чате бота"],
+        ["d", "Главное меню кнопками: Мой путь · Задать вопрос · О проекте · Правила мира · Тропа мира"],
+        ["d", "Закреп канала с кнопками: Что здесь будет · Правила мира · Позвать своего"],
+        ["d", "Панель хранителя круга: весть дня, заявки, вопросы, память, древо зова — кнопками"],
+        ["d", "Статистика для хранителя круга и кнопка «Опубликовать статистику»"],
+        ["d", "Вести можно поправить после публикации — Эхо обновит пост в канале"],
+      ]},
+      { name: "Эхо оживает — дальше", items: [
+        ["t", "Учится: лучше узнаёт похожие вопросы, книга ответов растёт каждую неделю"],
+        ["t", "Своя нейросеть, без чужих серверов: читает книгу ответов и материалы проекта, пишет ответы; сначала — на одобрение"],
+        ["t", "Голос мира: говорит своим голосом, помнит обсуждения, отдаёт Среде картину"],
+        ["t", "Работа круглосуточно — переезд на свой сервер"],
+        ["d", "Страница «Тропа мира» для своих — окном в Telegram; готовые камни — постами"],
+        ["p", "Пробуждение Эха: десять ступеней, пройдено четыре"],
+      ]},
+      { name: "Люди", items: [
+        ["d", "Автор ходит среди круга обычным путником, по тем же правилам"],
+        ["t", "Первые 5–10 человек в круге"],
+        ["t", "Первый опрос: какой камень интереснее"],
+        ["t", "Частые вопросы собраны и отвечены"],
+      ]},
+    ],
+    exit: "десять человек в круге, три опроса проведены, Эхо слушает и отвечает на частые вопросы, своя нейросеть пишет первые ответы." },
+
+  { n: "III", id: "book", title: "Книга", img: "c3", state: "later",
+    lead: "Сердце игры. Одна книга в двух частях — Путь к себе и Эпос: по сути огромная энциклопедия мира и тебя самого, в каждой части много глав и подглав. Сейчас книга раскрыта в руках у фигуры, но страницы пока пусты.",
+    groups: [
+      { name: "Книга на сцене и интерфейс", items: [
+        ["p", "Книга нарисована и нажимается — внутри пусто"],
+        ["t", "Разворот из двух страниц, перелистывание, звук страницы"],
+        ["t", "Интерфейс для большого объёма: оглавление, главы, закладки, поиск"],
+        ["d", "Одна книга с двумя частями — решено"],
+      ]},
+      { name: "Путь к себе — личная часть", items: [
+        ["t", "Путь по заданиям и достижениям: выполнил — галочка, заполнил разворот — страница переворачивается"],
+        ["t", "Полная база о персонаже: сколько сделал, где был, что видел"],
+        ["t", "Графики и статистика: дни, недели, атрибуты, места"],
+        ["t", "Печать за закрытый разворот"],
+        ["t", "Прописать главы и подглавы"],
+      ]},
+      { name: "Эпос — путь в бесконечность", items: [
+        ["p", "Пролог «Путь домой» — черновик текста есть"],
+        ["t", "История мира: главы открываются всем кругом вместе"],
+        ["t", "Энциклопедия мира: места, хранители, силы, правила"],
+        ["t", "Твои дела вписываются в общую историю"],
+        ["t", "Прописать главы и подглавы"],
+      ]},
+      { name: "Решить", items: [
+        ["t", "Что такое разворот: неделя коло, месяц или глава"],
+        ["t", "Как книги связаны с заданиями дня, недели и месяца"],
+      ]},
+    ],
+    exit: "обе книги открываются, в личной работает круг «разворот заполнен → страница перевернулась», в Эпосе открыта первая глава." },
+
+  { n: "IV", id: "path", title: "Путь персонажа", img: "c4", state: "later",
+    lead: "Статы есть, но что куда и зачем — нет. Отдельного меню для статов и навыков тоже нет.",
+    groups: [
+      { name: "Атрибуты", items: [
+        ["d", "Полоски опыта: Воля, Сила, Выносливость, Порядок, Нравственность"],
+        ["p", "Модель записана: Воля в основе → основные → Мудрость, Доблесть → Честь"],
+        ["t", "Ловкость: задания на неё"],
+        ["t", "Зачем каждый атрибут: что он открывает"],
+        ["t", "Формулы: как растёт каждый атрибут"],
+        ["t", "Интеллект — считается из статов и навыков"],
+      ]},
+      { name: "Окна", items: [
+        ["t", "Окно «Статы»: что видно, что куда, зачем"],
+        ["t", "Окно «Навыки»"],
+        ["t", "Статистика: сколько дней сдано, сколько дел сделано"],
+      ]},
+      { name: "Навыки", items: [
+        ["p", "Решено: опытом не качаются, растут от заданий, предметов, общения"],
+        ["t", "Список навыков: социальные и ремесленные"],
+        ["t", "Как навык растёт и что даёт"],
+      ]},
+      { name: "Звания и рейтинг", items: [
+        ["t", "Ветки званий: Путник → Друг троп, Знаток леса…"],
+        ["t", "Сезон рейтинга: длина не решена"],
+        ["t", "Рейтинг и статы видят все"],
+      ]},
+    ],
+    exit: "окна «Статы» и «Навыки» работают и объясняют каждое число." },
+
+  { n: "V", id: "gate", title: "Врата круга", img: "c5", state: "now",
+    lead: "Вход только по зову. В Telegram врата уже открываются: открытка, тропа, законы и ладонь. Дальше — такой же вход в саму игру и свой образ при первом входе.",
+    groups: [
+      { name: "Врата в Telegram", items: [
+        ["d", "Открытка-приглашение: одноразовый ключ, кого позвал — за того в ответе"],
+        ["d", "Тропа во весь экран: Стражник, видения Эха, законы Круга, ладонь на вратах"],
+        ["d", "Пришедших без зова встречает Стражник врат"],
+        ["d", "Древо зова: видно, кто кого позвал"],
+      ]},
+      { name: "Вход", items: [
+        ["d", "Схема входа по QR утверждена: приглашение одноразовое, устройство запоминается"],
+        ["p", "Задачи на код написаны, реализация отложена"],
+        ["t", "Вход с компьютера через телефон, как в Telegram"],
+        ["t", "Восстановление доступа"],
+      ]},
+      { name: "Первый вход и роли", items: [
+        ["t", "Создание образа персонажа"],
+        ["p", "Согласие с законами мира: в Telegram — при входе на тропе, в игре — при создании персонажа"],
+        ["t", "Участник и администратор: кабинет админа"],
+        ["t", "Данные игрока на сервере"],
+      ]},
+    ],
+    exit: "человек получает QR, входит, создаёт образ, и его прогресс виден с любого устройства." },
+
+  { n: "VI", id: "map", title: "Карта мира", img: "c6", state: "later",
+    lead: "Сервер уже знает мир; на экране карты пока нет.",
+    groups: [
+      { name: "Сервер", items: [
+        ["d", "Мир на сервере: регион, слои, точки, правила доступа"],
+        ["d", "Изменения мира с историей и откатом"],
+        ["p", "Открытие точки по GPS и QR — черновик, числа не утверждены"],
+      ]},
+      { name: "Экран", items: [
+        ["t", "Карта на экране (сейчас заглушка)"],
+        ["t", "Точки первой земли нанесены"],
+        ["t", "Облака расходятся по мере пути"],
+        ["t", "Дела без сети, отправка позже"],
+      ]},
+    ],
+    exit: "игрок видит карту, доходит до точки, и она открывается." },
+
+  { n: "VII", id: "trials", title: "Первые испытания", img: "c7", state: "later",
+    lead: "Выход в реальный мир: дела на местности, подтверждённые делом.",
+    groups: [
+      { name: "Основа на сервере", items: [
+        ["p", "Аттестация 1–10, опыт за дела, группы — заготовки"],
+      ]},
+      { name: "Испытания", items: [
+        ["t", "Задания на местности"],
+        ["t", "Подтверждение: мастер, QR, геопозиция"],
+        ["t", "Задания от игроков: квестодатель"],
+        ["t", "Первое испытание кругом вживую"],
+        ["t", "Награды: вещи и знаки"],
+      ]},
+    ],
+    exit: "первое испытание проведено вживую, награды выданы через игру." },
+
+  { n: "VIII", id: "sreda", title: "Круг хранителей и живая Среда", img: "c8", state: "later",
+    lead: "У каждого хранителя своя часть мира, своя тропа и своя книга — прохождение от 0 до 100%. Когда все хранители дойдут хотя бы до 65%, пробудится Среда. Хранитель на 100% полностью работает — и, возможно, станет богом. Это не скоро.",
+    groups: [
+      { name: "Путь: хранитель → бог → Среда", items: [
+        ["d", "Решено: сейчас — Круг хранителей; первый круг — Эхо, Код, Время и Память"],
+        ["d", "Решено: у каждого хранителя своя тропа, своя книга, свои страницы — прохождение 0–100%"],
+        ["d", "Решено: все хранители хотя бы на 65% — пробуждается Среда"],
+        ["d", "Решено: хранитель на 100% полностью работает и, возможно, становится богом"],
+        ["t", "Тропа и книга для каждого хранителя: что входит в его 100%"],
+        ["t", "Главы Эпоса о пробуждении Среды и о каждом новом боге"],
+      ]},
+      { name: "Первый круг: Эхо, Код, Время, Память", items: [
+        ["p", "Хранитель Памяти — зашифрованные копии (по команде, при включении ПК, по кнопке в Telegram), учения раз в месяц, воскрешение — работает · ≈60%"],
+        ["t", "Следующий — Хранитель Воли: появится, когда люди начнут делать задания дня и квесты (альфа-тест)"],
+        ["p", "Хранитель Эха — хранитель голосов: слушает, отвечает из книги, встречает у врат; пробуждение — ступень IV из десяти · ≈45%"],
+        ["p", "Хранитель Кода (ошибки и качество кода) — реестр ошибок и протокол уже ведутся · ≈25%"],
+        ["p", "Хранитель Времени (сутки, сезоны, коло) — время суток на сервере, коло в хабе · ≈20%"],
+      ]},
+      { name: "Хранители впереди", items: [
+        ["t", "Территории — земли, точки, тропы"],
+        ["t", "Формы — облик, декор, красота места"],
+        ["t", "Рынка — обмен и ценность вещей"],
+        ["t", "Заказов — услуги и договорённости между людьми"],
+        ["t", "Подтверждения — аттестация и признание дел"],
+        ["t", "Чести — редкий допуск и высокие врата"],
+        ["t", "Статуса — престиж и звания"],
+        ["t", "Предметов — вещи, их природа и путь"],
+        ["t", "Связей — мосты между частями мира"],
+        ["t", "Страж Печатей — ключи и доступ: QR-приглашения, пароли, токены, кто что может (решить, нужен ли отдельно)"],
+      ]},
+      { name: "Среда", items: [
+        ["d", "Пантеон описан (рабочие имена — «боги», теперь Круг хранителей)"],
+        ["t", "Хранители слышат друг друга: голоса людей и мира собираются в одну картину"],
+        ["t", "Все хранители на 65% — Среда пробуждается и подсказывает, куда направить силу"],
+      ]},
+    ],
+    exit: "все хранители прошли хотя бы 65% своей тропы — Среда пробудилась и раз в неделю говорит, что оживает, что затухает и куда направить силу." },
+];
+
+const STATE_LABEL = { now: "в работе", later: "впереди", closed: "пройдено" };
+const score = (items) => {
+  let d = 0, p = 0;
+  for (const [s] of items) { if (s === "d") d++; else if (s === "p") p++; }
+  return { d, p, total: items.length, pct: items.length ? Math.round(((d + p / 2) / items.length) * 100) : 0 };
+};
+const esc = (text) => text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+
+const all = STONES.flatMap((stone) => stone.groups.flatMap((group) => group.items));
+const total = score(all);
+document.getElementById("overall-pct").textContent = total.pct + "%";
+document.getElementById("overall-bar").innerHTML =
+  `<i class="d" style="width:${(total.d / total.total) * 100}%"></i><i class="p" style="width:${(total.p / total.total) * 50}%"></i>`;
+
+document.getElementById("nav").innerHTML = STONES.map((stone) => {
+  const s = score(stone.groups.flatMap((g) => g.items));
+  return `<a href="#${stone.id}"><img src="img/${stone.img}-t.jpg" alt=""><span><span class="t">${stone.n}. ${esc(stone.title)}</span><span class="pc">${s.pct}%</span></span></a>`;
+}).join("");
+
+const R = 70, C = 2 * Math.PI * R;
+document.getElementById("stones").innerHTML = STONES.map((stone) => {
+  const s = score(stone.groups.flatMap((g) => g.items));
+  const color = s.pct >= 100 ? "var(--done)" : stone.state === "now" ? "var(--part)" : "var(--todo)";
+  const groups = stone.groups.map((group) => {
+    const g = score(group.items);
+    const items = group.items.map(([st, text]) => `<li class="${st}"><i class="mk ${st}"></i><span>${esc(text)}</span></li>`).join("");
+    return `<section class="group"><h3>${esc(group.name)}<small>${g.d} из ${g.total}${g.p ? " · ещё " + g.p + " начато" : ""}</small></h3><ul>${items}</ul></section>`;
+  }).join("");
+  return `<article class="stone" id="${stone.id}">
+    <figure class="cover">
+      <img src="img/${stone.img}.jpg" alt="" loading="lazy">
+      <div class="prog" aria-hidden="true"><i style="width:${s.pct}%;background:${color}"></i></div>
+    </figure>
+    <div>
+      <div class="head"><h2>${stone.n}. ${esc(stone.title)}</h2><span class="state ${stone.state}">${STATE_LABEL[stone.state]}</span><span class="pct">${s.pct}%</span></div>
+      <p class="lead2">${esc(stone.lead)}</p>
+      <div class="groups">${groups}</div>
+      <p class="exit"><b>Камень пройден, когда</b> ${esc(stone.exit)}</p>
+    </div>
+  </article>`;
+}).join("");
+
+// Вехи тестов: сколько людей и до каких процентов должны дойти камни
+const MILESTONES = [
+  { name: "Альфа 0 · «Свои»", who: "3–5 близких людей", what: "играют в главный экран в браузере: задания дня, недели и месяца; говорят, что понятно, а что нет",
+    need: [["hub", 60], ["voice", 50]] },
+  { name: "Альфа 1 · «Круг»", who: "10–15 человек", what: "вход по личному QR, прогресс на сервере, окна статов и навыков, первая страница личной книги",
+    need: [["hub", 85], ["path", 50], ["gate", 80], ["book", 25]] },
+  { name: "Бета · «Земля»", who: "30–50 человек", what: "карта мира, точки открываются по пути, первое испытание вживую",
+    need: [["map", 60], ["trials", 40], ["gate", 100]] },
+  { name: "Открытие", who: "все, кого позовём", what: "полный путь от первого входа до первых наград; Эхо отвечает своим голосом",
+    need: [["hub", 100], ["book", 70], ["path", 80], ["map", 90], ["trials", 70], ["voice", 90]] },
+];
+const stoneById = Object.fromEntries(STONES.map((stone) => [stone.id, stone]));
+document.getElementById("milestones").innerHTML = MILESTONES.map((m) => {
+  let met = 0;
+  const rows = m.need.map(([id, need]) => {
+    const stone = stoneById[id];
+    const pct = score(stone.groups.flatMap((g) => g.items)).pct;
+    const ok = pct >= need; if (ok) met++;
+    return `<li class="${ok ? "d" : "t"}"><i class="mk ${ok ? "d" : ""}"></i><span>${stone.n}. ${esc(stone.title)} <span class="need ${ok ? "ok" : ""}">${pct}% из ${need}%</span></span></li>`;
+  }).join("");
+  const ready = met === m.need.length;
+  return `<article class="ms"><h3>${esc(m.name)}</h3><div class="who">${esc(m.who)}</div><p class="need" style="margin:0">${esc(m.what)}</p><ul>${rows}</ul><div class="verdict ${ready ? "ok" : "need"}">${ready ? "можно звать" : "условий выполнено: " + met + " из " + m.need.length}</div></article>`;
+}).join("");
+</script>

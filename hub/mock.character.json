@@ -1,0 +1,26 @@
+{
+  "_comment": "Заглушка данных персонажа для Main Hub v0.1. Заменится ответом API после авторизации.",
+  "name": "Имя Персонажа",
+  "title": "Начинающий Гончар",
+  "status": "Путник",
+  "verified": true,
+  "rating": { "place": null, "of": null, "_note": "место в общем рейтинге появится с сервером; до тех пор — «—» (обнулено 15.10)" },
+  "portrait": "/assets/hub/layers/portrait.png",
+  "location": { "region": "Полуостров Крым", "name": "Бельбекская долина", "regionCode": "hybrid_core_v1" },
+  "skills": [
+    { "id": "ceramics", "name": "Керамика", "icon": "pot" },
+    { "id": "botany", "name": "Ботаника", "icon": "leaf" },
+    { "id": "locksmith", "name": "Слесарное дело", "icon": "hammer" }
+  ],
+  "inventory": [
+    { "id": "backpack", "name": "Рюкзак", "icon": "backpack" },
+    { "id": "shirt", "name": "Одежда", "icon": "shirt" },
+    { "id": "tome", "name": "Книга", "icon": "tome" },
+    { "id": "herb", "name": "Трава", "icon": "herb" },
+    { "id": "map", "name": "Карта", "icon": "map" },
+    { "id": "tools", "name": "Инструменты", "icon": "tools" },
+    { "id": "chest1", "name": "Сундук", "icon": "chest" },
+    { "id": "chest2", "name": "Сундук", "icon": "chest" }
+  ],
+  "mail": { "unread": 0 }
+}

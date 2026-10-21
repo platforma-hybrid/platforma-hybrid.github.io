@@ -1,0 +1,284 @@
+{
+  "version": "0.1",
+  "stage": {
+    "width": 1920,
+    "height": 1080
+  },
+  "animations": true,
+  "uiScale": 0.6,
+  "worldUrl": "/world/",
+  "transitionMs": 800,
+  "layers": [
+    {
+      "id": "L0",
+      "name": "Фон",
+      "z": 0
+    },
+    {
+      "id": "L1",
+      "name": "Атмосфера",
+      "z": 10
+    },
+    {
+      "id": "L2",
+      "name": "Персонаж",
+      "z": 20
+    },
+    {
+      "id": "L3",
+      "name": "Планета",
+      "z": 30
+    },
+    {
+      "id": "L4",
+      "name": "Скалы и декор",
+      "z": 40
+    },
+    {
+      "id": "L5",
+      "name": "Интерфейс",
+      "z": 50
+    },
+    {
+      "id": "L6",
+      "name": "Эффекты",
+      "z": 60
+    },
+    {
+      "id": "FX1",
+      "name": "FX: лучи (screen)",
+      "z": 44,
+      "blend": "screen"
+    },
+    {
+      "id": "FX2",
+      "name": "FX: цветокоррекция (soft-light)",
+      "z": 45,
+      "blend": "soft-light"
+    },
+    {
+      "id": "FX3",
+      "name": "FX: виньетка",
+      "z": 46
+    }
+  ],
+  "items": [
+    {
+      "id": "bg",
+      "layer": "L0",
+      "kind": "image",
+      "src": "/assets/hub/layers/bg_well.jpg",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "lock": true
+    },
+    {
+      "id": "figure",
+      "layer": "L2",
+      "kind": "image",
+      "src": "/assets/hub/layers/character_figure.png",
+      "x": 1005,
+      "y": 204,
+      "w": 302,
+      "h": 420,
+      "fit": "contain",
+      "anim": "breathe"
+    },
+    {
+      "id": "book",
+      "layer": "L2",
+      "kind": "ui",
+      "component": "book",
+      "src": "/assets/hub/layers/book.png",
+      "x": 1041,
+      "y": 269,
+      "w": 130,
+      "h": 110,
+      "fit": "contain",
+      "anim": "bookglow"
+    },
+    {
+      "id": "hands",
+      "layer": "L2",
+      "kind": "image",
+      "src": "/assets/hub/layers/character_hands.png",
+      "x": 1005,
+      "y": 204,
+      "w": 302,
+      "h": 420,
+      "fit": "contain",
+      "anim": "breathe"
+    },
+    {
+      "id": "planet",
+      "layer": "L3",
+      "kind": "ui",
+      "component": "planet",
+      "src": "/assets/hub/layers/planet_well.png",
+      "x": 668,
+      "y": 594,
+      "w": 560,
+      "h": 290,
+      "fit": "contain",
+      "anim": "planetglow",
+      "fog": "/assets/hub/layers/planet_fog_well.png",
+      "fogMask": "/assets/hub/layers/planet_fog_mask.png"
+    },
+    {
+      "id": "title",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "titlePlank",
+      "x": 378,
+      "y": 9,
+      "w": 1160,
+      "h": 92,
+      "anchor": "top-center",
+      "scale": 0.85
+    },
+    {
+      "id": "dailies",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "dailies",
+      "x": 573,
+      "y": 58,
+      "w": 800,
+      "h": 54,
+      "anchor": "top-center",
+      "scale": 0.95
+    },
+    {
+      "id": "mail",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "mail",
+      "x": 1779,
+      "y": 32,
+      "w": 120,
+      "h": 88,
+      "anchor": "top-right",
+      "scale": 0.9
+    },
+    {
+      "id": "menu",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "kolo",
+      "x": 22,
+      "y": 40,
+      "w": 520,
+      "h": 1230,
+      "anchor": "top-left"
+    },
+    {
+      "id": "card",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "characterCard",
+      "x": 366,
+      "y": 138,
+      "w": 630,
+      "h": 300,
+      "anchor": "top-left"
+    },
+    {
+      "id": "status",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "statusPlank",
+      "x": 1273,
+      "y": 43,
+      "w": 530,
+      "h": 86,
+      "anchor": "top-right",
+      "scale": 0.65
+    },
+    {
+      "id": "inventory",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "inventory",
+      "x": 1557,
+      "y": 117,
+      "w": 325,
+      "h": 315,
+      "anchor": "top-right",
+      "scale": 0.9
+    },
+    {
+      "id": "location",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "locationPlank",
+      "x": 1437,
+      "y": 659,
+      "w": 480,
+      "h": 66,
+      "anchor": "top-right",
+      "scale": 0.85
+    },
+    {
+      "id": "planet_plank",
+      "layer": "L5",
+      "kind": "ui",
+      "component": "planetPlank",
+      "x": 1434,
+      "y": 589,
+      "w": 480,
+      "h": 66,
+      "anchor": "bottom-right",
+      "scale": 0.75
+    },
+    {
+      "id": "fireflies",
+      "layer": "L6",
+      "kind": "effect",
+      "effect": "fireflies",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "lock": true
+    },
+    {
+      "id": "fx_rays",
+      "layer": "FX1",
+      "kind": "image",
+      "src": "/assets/hub/layers/fx_rays.png",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "lock": true,
+      "anim": "fxrays",
+      "opacity": 1
+    },
+    {
+      "id": "fx_grade",
+      "layer": "FX2",
+      "kind": "image",
+      "src": "/assets/hub/layers/fx_grade.png",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "lock": true,
+      "opacity": 1
+    },
+    {
+      "id": "fx_vignette",
+      "layer": "FX3",
+      "kind": "image",
+      "src": "/assets/hub/layers/fx_vignette.png",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "lock": true,
+      "opacity": 1
+    }
+  ]
+}

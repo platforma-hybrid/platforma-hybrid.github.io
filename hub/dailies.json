@@ -1,0 +1,161 @@
+{
+  "note": "Ежедневные задания v0.2 — библиотека заданий и стартовые значения. Пока без сервера: прогресс хранится в браузере (localStorage). Спецификация: claude/SPEC_DAILIES.md. attr: strength | endurance | order | morality | dev (атрибут в разработке: без награды, отметить нельзя).",
+  "reward": 5,
+  "flaskMax": 100,
+  "flasks": [
+    "will",
+    "strength",
+    "endurance",
+    "order",
+    "morality"
+  ],
+  "start": {
+    "wallet": 0,
+    "flasks": {
+      "will": {
+        "level": 0,
+        "progress": 0
+      },
+      "strength": {
+        "level": 0,
+        "progress": 0
+      },
+      "endurance": {
+        "level": 0,
+        "progress": 0
+      },
+      "order": {
+        "level": 0,
+        "progress": 0
+      },
+      "morality": {
+        "level": 0,
+        "progress": 0
+      }
+    }
+  },
+  "groups": [
+    {
+      "id": "phys",
+      "title": "Физкультура",
+      "tasks": [
+        {
+          "id": "pushups",
+          "name": "Отжаться 20 раз",
+          "attr": "strength"
+        },
+        {
+          "id": "abs",
+          "name": "Пресс 30 раз",
+          "attr": "strength"
+        },
+        {
+          "id": "pullups",
+          "name": "Подтянуться 5 раз",
+          "attr": "strength"
+        },
+        {
+          "id": "run",
+          "name": "Пробежка 2 км",
+          "attr": "endurance"
+        },
+        {
+          "id": "rope",
+          "name": "Скакалка 5 минут",
+          "attr": "endurance"
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "title": "Дома",
+      "tasks": [
+        {
+          "id": "clean-home",
+          "name": "Уборка в доме",
+          "attr": "order"
+        },
+        {
+          "id": "own-space",
+          "name": "Порядок в своём пространстве",
+          "attr": "order"
+        },
+        {
+          "id": "dishes",
+          "name": "Помыть посуду",
+          "attr": "order"
+        },
+        {
+          "id": "cook",
+          "name": "Приготовить еду",
+          "attr": "dev"
+        }
+      ]
+    },
+    {
+      "id": "out",
+      "title": "На улице",
+      "tasks": [
+        {
+          "id": "garden",
+          "name": "Постричь сад",
+          "attr": "order"
+        },
+        {
+          "id": "yard",
+          "name": "Убрать мусор во дворе",
+          "attr": "order"
+        },
+        {
+          "id": "fix",
+          "name": "Починить что-то",
+          "attr": "order"
+        },
+        {
+          "id": "walk",
+          "name": "Прогулка 30 минут",
+          "attr": "dev"
+        }
+      ]
+    },
+    {
+      "id": "env",
+      "title": "Взаимодействие со средой",
+      "tasks": [
+        {
+          "id": "neighbor",
+          "name": "Помочь соседу",
+          "attr": "morality"
+        },
+        {
+          "id": "family",
+          "name": "Позвонить родным",
+          "attr": "morality"
+        },
+        {
+          "id": "kindness",
+          "name": "Доброе дело незнакомцу",
+          "attr": "morality"
+        }
+      ]
+    }
+  ],
+  "buys": [
+    {
+      "id": "series",
+      "name": "Сериал вечером",
+      "price": 10
+    },
+    {
+      "id": "sweets",
+      "name": "Сладкое",
+      "price": 15
+    },
+    {
+      "id": "drink",
+      "name": "Напиться сегодня",
+      "price": 30
+    }
+  ],
+  "_startNote": "Старт с нуля (автор, 15.10): все силы 0, кошелёк 0. Приросты (reward, flaskMax) — прежние."
+}

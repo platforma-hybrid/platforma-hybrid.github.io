@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Гибрид</title>
+    <link rel="icon" href="/sign.png" />
+    <link rel="stylesheet" href="/assets/fonts/fonts.css" />
+    <link rel="stylesheet" href="/hub/hub.css" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+      /* Игра живёт лёжа: телефон стоя — просим повернуть (компьютер и планшет не трогаем) */
+      .turn { position: fixed; inset: 0; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+        padding: 24px; text-align: center; background: #0d0b08; color: #e3b860; font-family: "Cormorant SC", Georgia, serif; }
+      .turn b { font-size: 28px; letter-spacing: .04em; }
+      .turn span { font-family: "Philosopher", Georgia, serif; font-size: 17px; color: #cdbb98; max-width: 300px; line-height: 1.45; }
+      .turn i { font-style: normal; font-size: 54px; animation: turn 2.4s ease-in-out infinite; }
+      @keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+      @media (orientation: portrait) and (max-width: 600px) { .turn { display: flex; } }
+      @media (prefers-reduced-motion: reduce) { .turn i { animation: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="turn" role="status"><i>📱</i><b>Поверни телефон</b><span>Круг открывается вширь — держи телефон горизонтально.</span></div>
+    <main id="stage"></main>
+    <script>
+      // Окно Telegram: готово, во весь экран (где Telegram умеет), цвета под игру.
+      (function () {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg) return;
+        try { tg.ready(); tg.expand(); } catch (e) {}
+        try { tg.setHeaderColor("#0d0b08"); tg.setBackgroundColor("#0d0b08"); } catch (e) {}
+        try { if (tg.isVersionAtLeast && tg.isVersionAtLeast("8.0") && tg.requestFullscreen) tg.requestFullscreen(); } catch (e) {}
+      })();
+    </script>
+    <script type="module" src="/hub/hub.js"></script>
+  </body>
+</html>
