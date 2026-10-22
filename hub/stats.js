@@ -112,15 +112,25 @@ export function powersBalance(lib, flasks, max = 100) {
   const total = counted.reduce((sum, a) => sum + val[a.key], 0);
   const will = flasks?.will?.level ?? 0;
   const ring = Math.min(B.ringMax ?? 0.3, (B.ringBase ?? 0.15) + (B.ringPerWill ?? 0.01) * will);
+  // форма (доли радиуса): «зерно» SEED, от него силы растут наружу, самая сильная — до 0,85.
+  // Пара с силой «в разработке» остаётся на зерне. Точка — центр тяжести формы: всегда внутри неё.
+  const SEED = 0.32;
+  const isCounted = new Set(counted.map((a) => a.key));
+  const shown = (key) => (isCounted.has(key) ? val[key] : 0);
+  const top = Math.max(40, ...lib.attrs.map((a) => shown(a.key)));
+  const reach = Object.fromEntries(lib.attrs.map((a) => [a.key, SEED + (0.85 - SEED) * (shown(a.key) / top)]));
   let x = 0;
   let y = 0;
+  let w = 0;
   for (const a of counted) {
     const r = (a.angle * Math.PI) / 180;
-    x += Math.cos(r) * val[a.key];
-    y += Math.sin(r) * val[a.key];
+    const k = reach[a.key];
+    x += Math.cos(r) * k * k;
+    y += Math.sin(r) * k * k;
+    w += k;
   }
-  const px = total ? (x / total) * 0.95 : 0;
-  const py = total ? (y / total) * 0.95 : 0;
+  const px = total && w ? x / w : 0;
+  const py = total && w ? y / w : 0;
   const offset = Math.hypot(px, py);
   const newcomer = total < (B.newcomer ?? 30);
   const balanced = total > 0 && !newcomer && offset <= ring;
@@ -130,7 +140,7 @@ export function powersBalance(lib, flasks, max = 100) {
     const gap = val[a.key] - val[a.pair];
     if (gap > 0 && (!lead || gap > lead.gap)) lead = { key: a.key, pair: a.pair, gap };
   }
-  return { val, total, will, ring, point: { x: px, y: py }, offset, newcomer, balanced, lead, devPairs: lib.attrs.filter((a) => a.dev).map((a) => [a.key, a.pair]) };
+  return { val, total, will, ring, seed: SEED, reach, point: { x: px, y: py }, offset, newcomer, balanced, lead, counted: isCounted, devPairs: lib.attrs.filter((a) => a.dev).map((a) => [a.key, a.pair]) };
 }
 
 function pathSummary(d, quests, character) {
@@ -269,7 +279,8 @@ export function initStats(ctx, getDailies) {
   const P = (deg, r) => [C.cx + Math.cos((deg * Math.PI) / 180) * r, C.cy + Math.sin((deg * Math.PI) / 180) * r];
   const nodes = {};
   for (const a of lib.attrs) {
-    const [sx, sy] = P(a.angle, C.socketR);
+    // центр гнезда — по картинке (stats.json → attrs[].socket), иначе по кругу
+    const [sx, sy] = a.socket ? [a.socket.x, a.socket.y] : P(a.angle, C.socketR);
     const socket = el("button", `st-socket${a.dev ? " dev" : ""}`);
     socket.type = "button";
     socket.dataset.key = a.key;
@@ -343,17 +354,17 @@ export function initStats(ctx, getDailies) {
   function renderCircle(bal) {
     const R = C.R;
     const box = sv("svg", { viewBox: `0 0 ${W.w} ${W.h}`, class: "st-circle-svg", "aria-hidden": "true" });
-    // форма игрока: самая сильная сторона — на 85 % радиуса (шкала растёт вместе с игроком), минимум 40 очков
-    const top = Math.max(40, Math.max(...Object.values(bal.val)) / 0.85);
-    if (Object.values(bal.val).some((v) => v > 0)) {
-      const pts = lib.attrs.map((a) => P(a.angle, (R * bal.val[a.key]) / top));
-      box.append(sv("polygon", { points: pts.map((p) => p.join(",")).join(" "), class: "st-shape" }));
-      for (const [x, y] of pts) box.append(sv("circle", { cx: x, cy: y, r: 4, class: "st-vert" }));
-    }
+    // форма игрока (21.10): «зерно» — малый шестиугольник, силы растут от него наружу; самая сильная — до 85 % радиуса.
+    // Форма рисует то же, что считает точка: пара с силой «в разработке» остаётся на зерне (число — на табличке).
+    const pts = lib.attrs.map((a) => P(a.angle, R * bal.reach[a.key]));
+    box.append(sv("polygon", { points: lib.attrs.map((a) => P(a.angle, R * bal.seed).join(",")).join(" "), class: "st-seed" }));
+    box.append(sv("polygon", { points: pts.map((p) => p.join(",")).join(" "), class: "st-shape" }));
+    lib.attrs.forEach((a, i) => box.append(sv("circle", { cx: pts[i][0], cy: pts[i][1], r: 4, class: `st-vert${bal.counted.has(a.key) ? "" : " off"}` })));
     // кольцо равновесия — его держит Воля
     const rr = bal.ring * R;
     box.append(sv("circle", { cx: C.cx, cy: C.cy, r: rr, class: "st-core" }), sv("circle", { cx: C.cx, cy: C.cy, r: rr, class: "st-core-line" }));
     // точка — центр тяжести сил
+    // точка — центр тяжести самой формы: всегда внутри неё и тянется к перекосу (как в «Навыках»)
     const px = C.cx + bal.point.x * R;
     const py = C.cy + bal.point.y * R;
     const calm = bal.balanced || bal.newcomer;

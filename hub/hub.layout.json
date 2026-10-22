@@ -83,8 +83,7 @@
       "y": 204,
       "w": 302,
       "h": 420,
-      "fit": "contain",
-      "anim": "breathe"
+      "fit": "contain"
     },
     {
       "id": "book",
@@ -108,8 +107,7 @@
       "y": 204,
       "w": 302,
       "h": 420,
-      "fit": "contain",
-      "anim": "breathe"
+      "fit": "contain"
     },
     {
       "id": "planet",

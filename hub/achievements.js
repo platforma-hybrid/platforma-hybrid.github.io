@@ -110,11 +110,58 @@ export function initAchievements(ctx, getDailies) {
     return r;
   }
 
+  // список листается внутри доски; справа — своя золотая полоса с ромбом-ползунком (22.10)
+  function scroller(node) {
+    const box = el("div", "ach-scroll");
+    const bar = el("div", "ach-bar");
+    const thumb = el("i", "ach-thumb");
+    bar.append(thumb);
+    const sync = () => {
+      const max = box.scrollHeight - box.clientHeight;
+      bar.hidden = max <= 1;
+      node.classList.toggle("ach-more", box.scrollTop < max - 2);
+      if (max <= 1) return;
+      const h = Math.max(40, (bar.clientHeight * box.clientHeight) / box.scrollHeight);
+      thumb.style.height = `${h}px`;
+      thumb.style.top = `${((bar.clientHeight - h) * box.scrollTop) / max}px`;
+    };
+    box.addEventListener("scroll", sync, { passive: true });
+    const toScroll = (clientY, grab) => {
+      const r = bar.getBoundingClientRect();
+      const k = r.height / (bar.clientHeight || 1); // zoom окна
+      const h = thumb.offsetHeight * k;
+      const f = Math.min(1, Math.max(0, (clientY - r.top - grab) / Math.max(1, r.height - h)));
+      box.scrollTop = f * (box.scrollHeight - box.clientHeight);
+    };
+    bar.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      const tr = thumb.getBoundingClientRect();
+      const grab = e.target === thumb ? e.clientY - tr.top : tr.height / 2;
+      toScroll(e.clientY, grab);
+      bar.setPointerCapture(e.pointerId);
+      const move = (ev) => toScroll(ev.clientY, grab);
+      const up = () => {
+        bar.removeEventListener("pointermove", move);
+        bar.removeEventListener("pointerup", up);
+        bar.removeEventListener("pointercancel", up);
+      };
+      bar.addEventListener("pointermove", move);
+      bar.addEventListener("pointerup", up);
+      bar.addEventListener("pointercancel", up);
+    });
+    return { box, bar, sync };
+  }
+
   function render(node, items = list(values(getDailies()))) {
+    const prevTop = node.querySelector(".ach-scroll")?.scrollTop ?? 0;
     node.replaceChildren();
     const got = items.filter((x) => state.got[x.id]).length;
     const total = items.filter((x) => !x.dev).length;
     node.append(el("div", "ach-count", fmt(t.count, { got, total })));
+    const sc = scroller(node);
+    node.append(sc.box, sc.bar);
+    const out = node;
+    node = sc.box;
 
     node.append(el("h3", "ach-group", lib.exp.title));
     const v = values(getDailies());
@@ -133,6 +180,12 @@ export function initAchievements(ctx, getDailies) {
       }
     }
     node.append(el("p", "qb-hint", t.hint));
+    node.scrollTop = prevTop;
+    window.requestAnimationFrame(sc.sync);
+    if (!out.dataset.watch) {
+      out.dataset.watch = "1";
+      window.addEventListener("resize", () => out.isConnected && out.querySelector(".ach-scroll")?.dispatchEvent(new Event("scroll")));
+    }
   }
 
   document.addEventListener("hub:dailies", () => refresh());
@@ -142,7 +195,8 @@ export function initAchievements(ctx, getDailies) {
     open() {
       openNode = el("div", "ach-board");
       render(openNode);
-      ctx.modal.showNode(t.title, openNode, "modal-wide modal-ach");
+      ctx.modal.showNode(t.title, openNode, "modal-art modal-ach");
+      window.requestAnimationFrame(() => openNode?.querySelector(".ach-scroll")?.dispatchEvent(new Event("scroll")));
     },
   };
 }

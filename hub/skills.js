@@ -207,7 +207,13 @@ export function initSkills(ctx, getDailies) {
   const state = el("div", "sk-state");
   const card = el("div", "sk-card");
   card.hidden = true;
-  win.append(side, intel, circleBox, card, state);
+  // рамка карточки (21.10): ромбы по углам — отдельным слоем, чтобы прокрутка карточки их не обрезала
+  const cardFrame = el("div", "sk-card-wrap");
+  cardFrame.hidden = true;
+  const frameIn = el("div", "sk-card-frame");
+  for (let i = 0; i < 4; i += 1) frameIn.append(el("i"));
+  cardFrame.append(frameIn);
+  win.append(side, intel, circleBox, card, cardFrame, state);
   let openId = null; // навык, чья карточка открыта
   const C = L?.circle;
   if (L) {
@@ -215,6 +221,7 @@ export function initSkills(ctx, getDailies) {
     place(intel, L.intel);
     place(state, L.state);
     place(card, L.card);
+    place(cardFrame, L.card);
     Object.assign(circleBox.style, { left: `${C.cx - 310}px`, top: `${C.cy - 300}px` });
   }
 
@@ -263,6 +270,7 @@ export function initSkills(ctx, getDailies) {
   }
 
   function renderList(mastery, bal) {
+    const keepScroll = list.scrollTop;
     list.replaceChildren();
     const order = lib.listOrder ? lib.listOrder.map((k) => blockBy[k]).filter(Boolean) : lib.blocks;
     for (const b of order) {
@@ -313,6 +321,17 @@ export function initSkills(ctx, getDailies) {
     }
     const started = lib.skills.filter((s) => (Number(mastery[s.id]) || 0) > 0).length;
     sideCount.textContent = fmt(t.count, { n: started, of: lib.skills.length });
+    // список не прыгает наверх при каждом обновлении; открытый навык всегда виден
+    list.scrollTop = keepScroll;
+    const openRow = list.querySelector(".sk-row.open");
+    if (openRow) {
+      // вручную, а не scrollIntoView: тот двигает и саму сцену хаба
+      const top = openRow.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+      const k = list.getBoundingClientRect().height / list.clientHeight || 1;
+      const y = top / k;
+      if (y < list.scrollTop) list.scrollTop = y - 8;
+      else if (y + openRow.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = y + openRow.offsetHeight - list.clientHeight + 8;
+    }
   }
 
   function renderCircle(bal) {
@@ -372,6 +391,15 @@ export function initSkills(ctx, getDailies) {
       svg.append(txt);
     }
     circleBox.replaceChildren(svg);
+    // плашки под подписями направлений (22.10): мерим текст, когда круг уже на экране
+    if (painted) window.requestAnimationFrame(() => {
+      for (const txt of svg.querySelectorAll(".sk-lab")) {
+        const box = txt.getBBox();
+        if (!box.width) continue;
+        const plate = sv("rect", { x: box.x - 10, y: box.y - 3, width: box.width + 20, height: box.height + 6, rx: 3, class: "sk-lab-plate" });
+        svg.insertBefore(plate, txt);
+      }
+    });
   }
 
   let lastBal = null;
@@ -629,6 +657,7 @@ export function initSkills(ctx, getDailies) {
     // на телефоне карточке нужна вся высота — строку равновесия прячем, пока карточка открыта
     state.hidden = phone && Boolean(openId);
     card.hidden = !openId;
+    cardFrame.hidden = !openId || !L || phone;
     if (openId) renderCard(mastery);
   }
 

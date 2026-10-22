@@ -573,6 +573,7 @@ button:focus-visible, .item[data-action]:focus-visible {
   font-size: 44px;
   line-height: 52px;
   color: var(--gold);
+  z-index: 3; /* поверх заголовка: у «Достижений» заголовок перекрывал крестик (21.10) */
 }
 
 /* ---------- режим правки (?edit=1) ---------- */
@@ -1794,6 +1795,8 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .st-circle-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .st-shape { fill: rgba(232, 194, 122, 0.2); stroke: #e8c27a; stroke-width: 2.5; stroke-linejoin: round; }
 .st-vert { fill: #f3d48a; }
+.st-vert.off { fill: #8a7a5a; }
+.st-seed { fill: none; stroke: rgba(232, 194, 122, 0.35); stroke-width: 1; stroke-dasharray: 2 4; }
 .st-core { fill: rgba(127, 216, 230, 0.07); }
 .st-core-line { fill: none; stroke: rgba(127, 216, 230, 0.6); stroke-width: 1.5; stroke-dasharray: 3 5; }
 .st-pull { stroke: #ff8a2a; stroke-width: 2; stroke-dasharray: 5 5; }
@@ -1814,7 +1817,7 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .st-plaque:hover, .st-plaque.selected { color: #ffe2a0 !important; text-shadow: 0 0 10px rgba(255, 200, 110, 0.7), 0 1px 3px #000; }
 .st-plaque.selected { box-shadow: inset 0 0 0 2px rgba(243, 212, 138, 0.75); border-radius: 3px; }
 .st-plaque.dev, .st-socket.dev { opacity: 0.6; }
-.st-plaque.dev::after { content: "скоро"; font: 12px var(--font-text); color: #b9a888; }
+.st-plaque.dev .st-plaque-name::after { content: " · скоро"; font: 12px var(--font-text); color: #b9a888; }
 
 /* нижняя доска: Воля и строка равновесия */
 .st-state { position: absolute; display: flex; align-items: center; gap: 26px; padding: 6px 28px; box-sizing: border-box; }
@@ -1879,3 +1882,92 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .st-pp-small .st-d-left > *, .st-pp-small .st-d-mid .st-deed-list { zoom: 1.25; }
 .st-pp-small .st-d-left { overflow-y: auto; }
 .st-pp-small .st-rung2 .st-rung-text { font-size: 19px; line-height: 22px; }
+
+/* «Силы» v2: цифры — ровные (lining), а не «старинные» Cormorant, у которых 0 сидит ниже строки; иконки — точно в центре гнезда */
+.st-v2 .st-plaque-n, .st-v2 .st-state-will-n, .st-v2 .st-sel-lv, .st-v2 .st-path-num, .st-v2 .st-rung2-badge, .st-v2 .st-deed-gain, .st-v2 .st-sel-prog, .st-v2 .st-chart-val {
+  font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }
+.st-v2 .st-plaque { line-height: 1; }
+.st-v2 .st-plaque-n, .st-v2 .st-plaque-name { line-height: 1; display: inline-block; }
+.st-socket .st-sym-art { display: block; margin: 0; }
+
+/* «Навыки» (21.10): выбранный навык заметен, карточка — в золотой рамке, строки списка — в тонкой рамке */
+.sk-art .sk-row { position: relative; border: 1px solid rgba(201, 149, 62, 0.42); background: linear-gradient(90deg, rgba(255, 236, 190, 0.05), rgba(255, 236, 190, 0.015));
+  box-shadow: inset 0 0 0 1px rgba(10, 9, 7, 0.6); transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; }
+.sk-art .sk-row:hover { border-color: rgba(232, 194, 122, 0.8); background: linear-gradient(90deg, rgba(255, 220, 150, 0.1), rgba(255, 220, 150, 0.03)); }
+.sk-row.open, .sk-art .sk-row.open { border: 2px solid #f3d48a; padding: 6px 9px; background: linear-gradient(90deg, rgba(255, 196, 96, 0.26), rgba(255, 196, 96, 0.08));
+  box-shadow: 0 0 16px rgba(255, 190, 90, 0.45), inset 0 0 12px rgba(255, 200, 110, 0.18); opacity: 1; }
+.sk-row.open::before { content: ""; position: absolute; left: -9px; top: 50%; width: 10px; height: 10px; margin-top: -5px; background: #f3d48a; transform: rotate(45deg);
+  box-shadow: 0 0 8px rgba(255, 200, 110, 0.9); }
+.sk-row.open .sk-name { color: #ffe9b8; text-shadow: 0 0 8px rgba(255, 200, 110, 0.6); }
+.sk-row.open .sk-num { color: #ffe9b8; }
+.sk-art .sk-row.open .sk-ic img { filter: drop-shadow(0 0 8px rgba(255, 200, 110, 0.95)) brightness(1.2) !important; }
+.sk-row.open .sk-bar { border-color: #c9953e; }
+
+.sk-card { border: 3px solid #b8893f; border-radius: 6px; background: linear-gradient(180deg, rgba(24, 21, 15, 0.97), rgba(13, 12, 10, 0.97));
+  box-shadow: inset 0 0 0 4px #0d0c0a, inset 0 0 0 5px rgba(243, 212, 138, 0.55), inset 0 0 40px rgba(255, 190, 90, 0.07), 0 0 0 1px #3b2c14, 0 0 22px rgba(255, 190, 90, 0.25), 0 12px 40px rgba(0, 0, 0, 0.75); }
+.sk-card-frame { position: absolute; inset: 0; pointer-events: none; }
+.sk-card-frame i { position: absolute; width: 12px; height: 12px; background: #f3d48a; transform: rotate(45deg); box-shadow: 0 0 8px rgba(255, 190, 90, 0.85); }
+.sk-card-frame i:nth-child(1) { left: -8px; top: -8px; } .sk-card-frame i:nth-child(2) { right: -8px; top: -8px; }
+.sk-card-frame i:nth-child(3) { left: -8px; bottom: -8px; } .sk-card-frame i:nth-child(4) { right: -8px; bottom: -8px; }
+.sk-card-wrap { position: absolute; pointer-events: none; }
+
+/* ===== Рамки (автор, 22.10: «всё сливается с фоном — нужна рамка») ===== */
+/* 1. Рамка вокруг расписных окон — рисованная ChatGPT (№3, бронза с плетёнкой; 22.10). Картинка собрана под окно 3:2 из кусков:
+   углы и ромбы посередине сторон — как нарисованы, плетёнка повторяется, ничего не растянуто. Притушена на ~15 %. */
+.sk-window.sk-art, .st-window.st-v2, .wood.modal.modal-art { overflow: visible; }
+.sk-window.sk-art::after, .st-window.st-v2::after, .wood.modal.modal-art::after {
+  content: ""; position: absolute; inset: -32px; z-index: 50; pointer-events: none;
+  background: url("/assets/hub/ui/frame/frame_window.png") center / 100% 100% no-repeat;
+  filter: brightness(0.86) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+}
+.wood.modal.modal-art::after { inset: -34px; } /* окна-модалки — 1536×1024, «Навыки» и «Силы» — 1440×960 */
+/* на телефоне окно во весь экран — внешнюю рамку не рисуем */
+.sk-window.sk-pphone::before, .sk-window.sk-pphone::after, .st-window.st-pp::before, .st-window.st-pp::after,
+.ph-modal .wood.modal.modal-art::before, .ph-modal .wood.modal.modal-art::after { display: none; }
+
+/* 2. Строки списка навыков — таблички: тихий тонкий край, золото — у строки под мышкой и у выбранной; группы — с золотой чертой */
+.sk-art .sk-row { border: 1px solid rgba(201, 149, 62, 0.22); background: linear-gradient(90deg, rgba(14, 12, 9, 0.82), rgba(22, 19, 14, 0.7));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); transition: border-color 0.2s, box-shadow 0.2s; }
+.sk-art .sk-row:hover { border-color: rgba(227, 194, 122, 0.85); box-shadow: 0 0 10px rgba(255, 190, 90, 0.18), 0 2px 6px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(90deg, rgba(40, 30, 16, 0.85), rgba(26, 21, 14, 0.75)); }
+.sk-art .sk-grp { color: #e3c27a; border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, #c9953e, rgba(201, 149, 62, 0.15)) 1;
+  text-shadow: 0 1px 3px #000; }
+.sk-art .sk-grp em { color: #b9a888; }
+
+/* 3. Подписи направлений на круге — на тёмных плашках в рамке */
+.sk-lab-plate { fill: rgba(14, 12, 9, 0.88); stroke: #b8893f; stroke-width: 1.5; }
+.sk-art .sk-lab { stroke: none; }
+
+/* ===== «Достижения» на живописном фоне (22.10): пока — грот «Навыков» с большой доской; потом — «зал славы» от ChatGPT. Места — в пикселях картины 1536×1024 ===== */
+.wood.modal.modal-ach.modal-art { background-image: url("/assets/hub/ui/achievements/bg_achievements.jpg"); }
+.modal-art.modal-ach h2 { left: 603px; width: 328px; height: 68px; font-size: 38px; }
+.modal-art.modal-ach .modal-close { background: rgba(14, 13, 11, 0.82); box-shadow: 0 0 0 3px rgba(14, 13, 11, 0.5), 0 0 0 5px rgba(201, 149, 62, 0.7); }
+.modal-art.modal-ach .ach-board { position: static; }
+.modal-art.modal-ach .ach-count { position: absolute; left: 518px; top: 122px; width: 500px; margin: 0; font-size: 28px; text-shadow: 0 2px 4px #000; }
+.modal-art.modal-ach .ach-scroll { position: absolute; left: 140px; top: 182px; width: 1226px; height: 708px; overflow-y: auto; scrollbar-width: none; padding-right: 6px; box-sizing: border-box; }
+.modal-art.modal-ach .ach-scroll::-webkit-scrollbar { display: none; }
+.modal-art.modal-ach.ach-more .ach-scroll, .modal-art.modal-ach .ach-more .ach-scroll { -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
+.modal-art.modal-ach .ach-group { margin: 18px 0 10px; font-size: 26px; color: #e3c27a; border-bottom: 0; border-image: linear-gradient(90deg, #c9953e, rgba(201, 149, 62, 0.1)) 1; border-bottom: 1.5px solid; padding-bottom: 6px; text-shadow: 0 1px 3px #000; }
+.modal-art.modal-ach .ach-group:first-child { margin-top: 0; }
+.modal-art.modal-ach .ach-row { height: 74px; box-sizing: border-box; margin: 0 0 10px; padding: 0 22px; gap: 20px; font-size: 24px; border: 1.5px solid rgba(201, 149, 62, 0.75); border-radius: 4px;
+  background: linear-gradient(90deg, rgba(14, 12, 9, 0.85), rgba(22, 19, 14, 0.72)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.5); }
+.modal-art.modal-ach .ach-row:hover { border-color: #e3c27a; }
+.modal-art.modal-ach .ach-row.dev { opacity: 0.5; }
+.modal-art.modal-ach .ach-name { width: 290px; }
+.modal-art.modal-ach .ach-medals { gap: 10px; }
+.modal-art.modal-ach .ach-medal { min-width: 64px; height: 40px; border-radius: 20px; font-size: 18px; }
+.modal-art.modal-ach .ach-next { width: 150px; font-size: 20px; }
+.modal-art.modal-ach .qb-hint { margin: 14px 4px 30px; font-size: 19px !important; line-height: 1.4 !important; color: #b9a47c !important; }
+.modal-art.modal-ach .ach-bar { position: absolute; left: 1392px; top: 188px; width: 14px; height: 696px; border-radius: 7px; cursor: pointer; touch-action: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(40, 30, 14, 0.75), rgba(0, 0, 0, 0.55)); box-shadow: inset 0 0 0 1px rgba(201, 149, 62, 0.55); }
+.modal-art.modal-ach .ach-bar[hidden] { display: none; }
+.modal-art.modal-ach .ach-thumb { position: absolute; left: 1px; width: 12px; border-radius: 6px; background: linear-gradient(90deg, #8a6424, #f3d48a, #8a6424); box-shadow: 0 0 8px rgba(255, 200, 110, 0.5); }
+.modal-art.modal-ach .ach-thumb::before { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%) rotate(45deg);
+  background: linear-gradient(135deg, #fff1c4, #c9953e 60%, #7a5418); border: 1.5px solid #2a1e0c; box-shadow: 0 0 8px rgba(255, 200, 110, 0.7); }
+.ph-modal .modal-art.modal-ach .ach-bar { width: 22px; left: 1388px; border-radius: 11px; }
+.ph-modal .modal-art.modal-ach .ach-thumb { width: 20px; border-radius: 10px; }
+.ph-modal .modal-art.modal-ach .ach-thumb::before { width: 28px; height: 28px; }
+
+/* «Достижения», спокойнее (22.10): строки — тонкий тихий край, золото — только при наведении */
+.modal-art.modal-ach .ach-row { border: 1px solid rgba(201, 149, 62, 0.22); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); transition: border-color 0.2s, box-shadow 0.2s; }
+.modal-art.modal-ach .ach-row:hover { border-color: rgba(227, 194, 122, 0.85); box-shadow: 0 0 10px rgba(255, 190, 90, 0.18), 0 2px 6px rgba(0, 0, 0, 0.45); }
