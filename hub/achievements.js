@@ -106,6 +106,16 @@ export function initAchievements(ctx, getDailies) {
     });
     r.append(medals);
     const next = tiers.find((n, i) => !state.got[ids[i]]);
+    // полоска до следующей медали (22.10): от прошлой ступени до следующей
+    const prog = el("span", "ach-prog");
+    const fill = el("i");
+    if (!dev) {
+      const prev = next === undefined ? 0 : (tiers[tiers.indexOf(next) - 1] ?? 0);
+      const f = next === undefined ? 1 : Math.min(1, Math.max(0, (cur - prev) / (next - prev)));
+      fill.style.width = `${Math.round(f * 100)}%`;
+    }
+    prog.append(fill);
+    r.append(prog);
     r.append(el("span", "ach-next", dev ? t.dev : next === undefined ? t.allDone : `${Math.min(cur, next)} / ${next}`));
     return r;
   }
@@ -158,6 +168,12 @@ export function initAchievements(ctx, getDailies) {
     const got = items.filter((x) => state.got[x.id]).length;
     const total = items.filter((x) => !x.dev).length;
     node.append(el("div", "ach-count", fmt(t.count, { got, total })));
+    // общая полоса «сколько пройдено из всего» (22.10)
+    const all = el("div", "ach-total");
+    const allFill = el("i");
+    allFill.style.width = `${total ? Math.round((got / total) * 1000) / 10 : 0}%`;
+    all.append(allFill);
+    node.append(all);
     const sc = scroller(node);
     node.append(sc.box, sc.bar);
     const out = node;

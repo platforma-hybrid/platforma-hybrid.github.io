@@ -1971,3 +1971,30 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 /* «Достижения», спокойнее (22.10): строки — тонкий тихий край, золото — только при наведении */
 .modal-art.modal-ach .ach-row { border: 1px solid rgba(201, 149, 62, 0.22); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); transition: border-color 0.2s, box-shadow 0.2s; }
 .modal-art.modal-ach .ach-row:hover { border-color: rgba(227, 194, 122, 0.85); box-shadow: 0 0 10px rgba(255, 190, 90, 0.18), 0 2px 6px rgba(0, 0, 0, 0.45); }
+/* «Достижения»: полоска до следующей медали (22.10) */
+.ach-prog { flex: 1; min-width: 60px; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 0 0 1px rgba(201, 149, 62, 0.25); overflow: hidden; }
+.ach-prog i { display: block; height: 100%; width: 0; border-radius: 3px; background: linear-gradient(90deg, #8a6424, #f3d48a); box-shadow: 0 0 6px rgba(255, 200, 110, 0.5); transition: width 0.6s ease; }
+.ach-row.dev .ach-prog { visibility: hidden; }
+.ach-medals { flex: none; }
+.modal-art.modal-ach .ach-prog { height: 8px; border-radius: 4px; margin-left: 10px; }
+/* «Достижения»: общая полоса под счётом — сколько пройдено из всего (22.10) */
+.ach-total { position: relative; height: 10px; margin: 0 0 10px; border-radius: 5px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 0 1px rgba(201, 149, 62, 0.4); }
+.ach-total i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, #7a5418, #c9953e 60%, #f3d48a); box-shadow: 0 0 10px rgba(255, 200, 110, 0.45); transition: width 0.8s ease; }
+.ach-total i::after { content: ""; position: absolute; right: -9px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%) rotate(45deg);
+  background: linear-gradient(135deg, #fff1c4, #c9953e 60%, #7a5418); border: 1.5px solid #2a1e0c; box-shadow: 0 0 8px rgba(255, 200, 110, 0.7); }
+.modal-art.modal-ach .ach-count { top: 108px; }
+.modal-art.modal-ach .ach-total { position: absolute; left: 340px; top: 156px; width: 856px; margin: 0; }
+.modal-art.modal-ach .ach-scroll { top: 194px; height: 696px; }
+.modal-art.modal-ach .ach-bar { top: 200px; height: 684px; }
+/* «Навыки»: знаки направлений в гнёздах круга (22.10) */
+.sk-dir-halo { fill: rgba(20, 14, 6, 0.75); }
+.sk-dir-plate { fill: #100d0a; stroke: #c9953e; stroke-width: 2.5; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)); }
+.sk-dir-ic { transition: filter 0.25s, opacity 0.25s; filter: drop-shadow(0 1px 2px #000); }
+.sk-dir { pointer-events: all; }
+.sk-dir:hover .sk-dir-ic { filter: drop-shadow(0 0 6px rgba(255, 200, 110, 0.9)) brightness(1.2); }
+.sk-dir:hover .sk-dir-plate { stroke: #f3d48a; }
+.sk-dir.frozen .sk-dir-ic { filter: grayscale(0.7) brightness(0.7) drop-shadow(0 0 4px rgba(150, 200, 255, 0.8)); }
+.sk-dir.frozen .sk-dir-plate { stroke: #8fb8d8; }
+.sk-dir.up .sk-dir-ic { animation: sk-dir-up 2.4s ease-in-out infinite; }
+@keyframes sk-dir-up { 50% { filter: drop-shadow(0 0 8px rgba(255, 210, 120, 0.95)) brightness(1.25); } }
+@media (prefers-reduced-motion: reduce) { .sk-dir.up .sk-dir-ic { animation: none; } }

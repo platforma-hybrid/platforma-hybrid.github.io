@@ -9,7 +9,16 @@
   },
   "art": {
     "bg": "bg_skills.jpg",
-    "_note": "Фон — чистый грот «Навыки» от ChatGPT (docs/ui/skills/bg_skills.png, 1536×1024, ужат до 1440×960). Без него окно рисуется кодом, как в v0.1."
+    "_note": "Фон — чистый грот «Навыки» от ChatGPT (docs/ui/skills/bg_skills.png, 1536×1024, ужат до 1440×960). Без него окно рисуется кодом, как в v0.1.",
+    "dirIcons": {
+      "body": "dir_body.png",
+      "mind": "dir_mind.png",
+      "craft": "dir_craft.png",
+      "nature": "dir_nature.png",
+      "art": "dir_art.png",
+      "people": "dir_people.png"
+    },
+    "_dirNote": "Знаки шести направлений в гнёздах круга (ChatGPT, 22.10) — на тёмных медальонах; гнёзда — layout.sockets."
   },
   "layout": {
     "title": {
@@ -52,6 +61,35 @@
       "y": 184,
       "w": 640,
       "h": 588
+    },
+    "sockets": {
+      "body": [
+        960,
+        205
+      ],
+      "craft": [
+        1194,
+        332
+      ],
+      "people": [
+        1196,
+        586
+      ],
+      "mind": [
+        960,
+        716
+      ],
+      "nature": [
+        725,
+        588
+      ],
+      "art": [
+        725,
+        332
+      ],
+      "r": 30,
+      "icon": 54,
+      "_note": "Центры нарисованных гнёзд (измерены по фону 22.10), пиксели окна 1440×960; r — медальон, icon — знак."
     }
   },
   "blocks": [

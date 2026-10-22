@@ -378,9 +378,30 @@ export function initSkills(ctx, getDailies) {
     tip.textContent = t.dotTip;
     dot.append(tip);
     svg.append(dot);
+    // знаки направлений в нарисованных гнёздах (22.10): тёмный медальон + знак; состояние — замерло / догоняет
+    const SK = L?.sockets;
+    if (painted && SK && lib.art?.dirIcons) {
+      for (const b of lib.blocks) {
+        const at = SK[b.key];
+        const src = lib.art.dirIcons[b.key];
+        if (!at || !src) continue;
+        const x = at[0] - CC.cx;
+        const y = at[1] - CC.cy;
+        const st = bal.status[b.key].kind;
+        const g = sv("g", { class: `sk-dir ${st}` });
+        g.append(sv("circle", { cx: x, cy: y, r: SK.r + 3, class: "sk-dir-halo" }), sv("circle", { cx: x, cy: y, r: SK.r, class: "sk-dir-plate" }));
+        g.append(sv("image", { href: ART_DIR + src, x: x - SK.icon / 2, y: y - SK.icon / 2, width: SK.icon, height: SK.icon, class: "sk-dir-ic" }));
+        const tip = sv("title");
+        tip.textContent = b.name;
+        g.append(tip);
+        svg.append(g);
+      }
+    }
     // подписи направлений со статусом
     for (const b of lib.blocks) {
-      const [x, y] = P(b.angle, CC?.label ?? R + (phone ? 34 : 44));
+      const vert = Math.abs(Math.cos((b.angle * Math.PI) / 180)) < 0.1;
+      // верх и низ: знак в гнезде стоит прямо над подписью — подпись чуть внутрь (22.10)
+      const [x, y] = P(b.angle, (CC?.label ?? R + (phone ? 34 : 44)) - (painted && SK && vert ? 30 : 0));
       const st = bal.status[b.key].kind;
       // в живописном круге боковые подписи прижаты внутрь, чтобы не лезть на обод
       // живописный круг: боковые подписи внутрь; круг кодом на телефоне — наружу, чтобы не ложились на кольцо
