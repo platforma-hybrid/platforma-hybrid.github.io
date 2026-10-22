@@ -1998,3 +1998,5 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .sk-dir.up .sk-dir-ic { animation: sk-dir-up 2.4s ease-in-out infinite; }
 @keyframes sk-dir-up { 50% { filter: drop-shadow(0 0 8px rgba(255, 210, 120, 0.95)) brightness(1.25); } }
 @media (prefers-reduced-motion: reduce) { .sk-dir.up .sk-dir-ic { animation: none; } }
+/* «Достижения» на компьютере — того же размера, что «Навыки» и «Силы» (22.10): 1536 × 0,75 = 1152 */
+.modal-backdrop:not(.ph-modal) .wood.modal.modal-art.modal-ach { zoom: 0.75; }
