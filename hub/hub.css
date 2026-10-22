@@ -1817,7 +1817,7 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .st-plaque:hover, .st-plaque.selected { color: #ffe2a0 !important; text-shadow: 0 0 10px rgba(255, 200, 110, 0.7), 0 1px 3px #000; }
 .st-plaque.selected { box-shadow: inset 0 0 0 2px rgba(243, 212, 138, 0.75); border-radius: 3px; }
 .st-plaque.dev, .st-socket.dev { opacity: 0.6; }
-.st-plaque.dev .st-plaque-name::after { content: " · скоро"; font: 12px var(--font-text); color: #b9a888; }
+/* «Ловкость · скоро» убрано (автор, 22.10): просто имя; «в разработке» — в подсказке при наведении */
 
 /* нижняя доска: Воля и строка равновесия */
 .st-state { position: absolute; display: flex; align-items: center; gap: 26px; padding: 6px 28px; box-sizing: border-box; }
@@ -2000,3 +2000,31 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 @media (prefers-reduced-motion: reduce) { .sk-dir.up .sk-dir-ic { animation: none; } }
 /* «Достижения» на компьютере — того же размера, что «Навыки» и «Силы» (22.10): 1536 × 0,75 = 1152 */
 .modal-backdrop:not(.ph-modal) .wood.modal.modal-art.modal-ach { zoom: 0.75; }
+/* таблички места (Полуостров Крым · Бельбекская долина) убраны с главного экрана — уйдут в хаб 2 с картой (автор, 22.10) */
+.ph-loc { display: none; }
+/* ===== Режим «Числа» (?admin=1, 22.10): панель справа + полоса «ПРОВЕРКА» ===== */
+.adm-panel { position: fixed; top: 12px; right: 12px; z-index: 3000; width: 330px; max-height: calc(100vh - 24px); overflow-y: auto; box-sizing: border-box; padding: 12px;
+  background: rgba(12, 16, 20, 0.95); border: 1px solid #2d4a5a; border-radius: 8px; color: #dfe9ef; font: 13px/1.35 system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+.adm-panel h2 { margin: 0 0 8px; font-size: 16px; display: flex; justify-content: space-between; align-items: center; color: #ffd27a; }
+.adm-panel.collapsed > :not(h2) { display: none; }
+.adm-panel.collapsed h2 { margin: 0; }
+.adm-panel fieldset { margin: 0 0 10px; padding: 6px 8px 8px; border: 1px solid #2d4a5a; border-radius: 6px; }
+.adm-panel legend { color: #9fdcff; padding: 0 4px; }
+.adm-panel button { width: 100%; margin: 2px 0; padding: 6px; border: 0; border-radius: 4px; background: #1f6f8f; color: #fff; cursor: pointer; font: inherit; }
+.adm-panel button:hover { background: #2a86aa; }
+.adm-panel button:disabled { opacity: 0.4; cursor: default; }
+.adm-panel .adm-fold { width: auto; padding: 2px 8px; font-size: 12px; }
+.adm-panel .adm-back { background: #8f3f2f; }
+.adm-panel select { width: 100%; margin: 2px 0 4px; padding: 4px; background: #0e1418; color: #dfe9ef; border: 1px solid #2d4a5a; border-radius: 4px; }
+.adm-row { display: flex; gap: 6px; }
+.adm-row button { flex: 1; }
+.adm-field { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin: 2px 0; }
+.adm-field input { width: 70px; padding: 3px 4px; background: #0e1418; color: #fff; border: 1px solid #2d4a5a; border-radius: 4px; font: inherit; }
+.adm-pair { display: grid; grid-template-columns: 1fr; margin: 4px 0 6px; padding-bottom: 4px; border-bottom: 1px dashed #24394a; }
+.adm-pair .adm-name { color: #ffd27a; }
+.adm-sub { margin: 6px 0 2px; color: #ffd27a; }
+.adm-help { margin: 6px 0 0; color: #a9bcc8; font-size: 12px; }
+.adm-banner { position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 3001; display: flex; align-items: center; gap: 12px; padding: 6px 14px;
+  background: #b5341f; color: #fff; border-radius: 0 0 8px 8px; font: 14px system-ui, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
+.adm-banner b { letter-spacing: 0.1em; }
+.adm-banner a, .adm-banner button { color: #fff; background: rgba(0, 0, 0, 0.3); border: 0; border-radius: 4px; padding: 3px 8px; font: inherit; cursor: pointer; text-decoration: none; }

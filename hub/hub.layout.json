@@ -216,7 +216,8 @@
       "w": 480,
       "h": 66,
       "anchor": "top-right",
-      "scale": 0.85
+      "scale": 0.85,
+      "visible": false
     },
     {
       "id": "planet_plank",
@@ -228,7 +229,8 @@
       "w": 480,
       "h": 66,
       "anchor": "bottom-right",
-      "scale": 0.75
+      "scale": 0.75,
+      "visible": false
     },
     {
       "id": "fireflies",

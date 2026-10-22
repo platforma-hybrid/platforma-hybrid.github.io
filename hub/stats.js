@@ -351,9 +351,19 @@ export function initStats(ctx, getDailies) {
     return { level: flask?.level ?? 0, progress: flask?.progress ?? 0, max };
   }
 
-  function renderCircle(bal) {
+  function renderCircle(bal, hasForm = true) {
     const R = C.R;
     const box = sv("svg", { viewBox: `0 0 ${W.w} ${W.h}`, class: "st-circle-svg", "aria-hidden": "true" });
+    // пока все силы 0 — формы нет, как в «Навыках»: только кольцо и точка в центре (автор, 22.10)
+    if (!hasForm) {
+      const rr0 = bal.ring * R;
+      box.append(sv("circle", { cx: C.cx, cy: C.cy, r: rr0, class: "st-core" }), sv("circle", { cx: C.cx, cy: C.cy, r: rr0, class: "st-core-line" }));
+      const dot0 = sv("g", { class: "st-dot calm" });
+      dot0.append(sv("circle", { cx: C.cx, cy: C.cy, r: 22, class: "st-dot-glow" }), sv("circle", { cx: C.cx, cy: C.cy, r: 10, class: "st-dot-core" }));
+      box.append(dot0);
+      circle.replaceChildren(box);
+      return;
+    }
     // форма игрока (21.10): «зерно» — малый шестиугольник, силы растут от него наружу; самая сильная — до 85 % радиуса.
     // Форма рисует то же, что считает точка: пара с силой «в разработке» остаётся на зерне (число — на табличке).
     const pts = lib.attrs.map((a) => P(a.angle, R * bal.reach[a.key]));
@@ -602,7 +612,7 @@ export function initStats(ctx, getDailies) {
       node.plaque.setAttribute("aria-label", `${a.name}: ${s.level}, ${fmt(t.progress, { p: s.progress, max: s.max })}`);
       node.socket.setAttribute("aria-label", a.name);
     }
-    renderCircle(bal);
+    renderCircle(bal, lib.attrs.some((a) => !a.dev && stateOf(a.key, d).level > 0));
     renderState(bal);
     renderSelected(d, gain);
     renderPath(pathSummary(d, quests, ctx.character), empty);

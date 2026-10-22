@@ -1072,6 +1072,12 @@ async function main() {
     const { startEditMode } = await import("./hub.edit.js");
     startEditMode(ctx, { placeItem, fitStage });
   }
+  // Режим «Числа» (?admin=1): проверочные числа поверх настоящего прогресса; пока проверка идёт — полоса «ПРОВЕРКА»
+  if (!ctx.editMode && (params.get("admin") === "1" || window.localStorage.getItem("gibrid.admin.real") !== null)) {
+    const { startAdmin, showSandboxBanner, sandboxOn } = await import("./admin.js");
+    if (params.get("admin") === "1") startAdmin(ctx);
+    if (sandboxOn()) showSandboxBanner(texts);
+  }
   // Мини-обучение при первом входе (в режиме правки не мешает).
   if (!ctx.editMode) {
     const { initTour } = await import("./tour.js");
