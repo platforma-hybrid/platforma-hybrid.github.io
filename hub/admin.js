@@ -3,6 +3,8 @@
 // «Вернуть моё» кладёт его обратно. Пока проверка идёт — сверху висит заметная полоса «ПРОВЕРКА».
 // Подопечные и забота навыков (растения, питомцы) не трогаются никогда.
 
+import { addPoints, fractionalLevel, levelNeed } from "./levels.js";
+
 const KEYS = ["gibrid.dailies.v1", "gibrid.quests.v1", "gibrid.achievements.v1", "gibrid.skills.v1", "gibrid.stats.seen.v1"];
 const REAL = "gibrid.admin.real";
 const UNDO = "gibrid.admin.undo";
@@ -57,7 +59,7 @@ function daysAgo(n) {
 // ---------- модель ----------
 
 function freshDailies(data) {
-  return { day: dayKey(new Date()), wallet: 0, earned: 0, flasks: structuredClone(data.start.flasks), done: [], bought: [], closed: false, history: [] };
+  return { day: dayKey(new Date()), wallet: 0, earned: 0, flasks: structuredClone(data.start.flasks), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 2 };
 }
 function loadDailies(data) {
   const s = ls.json("gibrid.dailies.v1", null);
@@ -69,12 +71,9 @@ function loadDailies(data) {
   s.earned ??= 0;
   return s;
 }
-function addFlask(state, key, amount, max) {
+function addFlask(state, key, amount, curve) {
   const f = (state.flasks[key] ??= { level: 0, progress: 0 });
-  let total = f.level * max + f.progress + amount;
-  if (total < 0) total = 0;
-  f.level = Math.floor(total / max);
-  f.progress = total % max;
+  addPoints(curve, f, amount);
 }
 // дни истории подряд до вчерашнего: самый старый — первый
 function renumberHistory(state) {
@@ -86,19 +85,27 @@ function renumberHistory(state) {
 function activeTasks(data) {
   return data.groups.flatMap((g) => g.tasks).filter((t) => t.attr && t.attr !== "dev");
 }
-// один сданный день: выбранные задания → опыт, Воля, силы; день уходит в историю
+// один сданный день — по тем же правилам, что доска заданий (24.10): сила +reward за дело; Воля +1 за дело,
+// +1 за отстающую силу пары, +5 за сданный день, +5 если сделано всё (прибавка за равновесие здесь не считается)
+let PAIR = {};
 function playDay(state, data, tasks) {
   const r = data.reward;
-  const max = data.flaskMax;
+  const curve = data.levelCurve;
+  const W = data.will ?? { perTask: 1, lagging: 1, day: 5, green: 5 };
   const attrs = {};
+  let will = 0;
   for (const t of tasks) {
     state.wallet += r;
     state.earned = (state.earned ?? 0) + r;
-    addFlask(state, "will", r, max);
-    if (data.flasks.includes(t.attr)) addFlask(state, t.attr, r, max);
+    const pair = PAIR[t.attr];
+    const lag = pair && state.flasks[pair] && state.flasks[t.attr] && fractionalLevel(curve, state.flasks[t.attr]) < fractionalLevel(curve, state.flasks[pair]);
+    will += W.perTask + (lag ? W.lagging : 0);
+    if (data.flasks.includes(t.attr)) addFlask(state, t.attr, r, curve);
     attrs[t.attr] = (attrs[t.attr] ?? 0) + 1;
   }
-  state.history.push({ day: "", done: tasks.length, ids: tasks.map((t) => t.id), attrs, spent: 0, closedBy: "player" });
+  if (tasks.length) will += W.day + (tasks.length >= activeTasks(data).length ? W.green : 0);
+  addFlask(state, "will", will, curve);
+  state.history.push({ day: "", done: tasks.length, ids: tasks.map((t) => t.id), attrs, spent: 0, closedBy: "player", willBonus: tasks.length ? W.day : 0 });
   state.history = state.history.slice(-400);
 }
 // выбрать задания дня: доля от всех, с уклоном в одну силу
@@ -199,6 +206,7 @@ export function startAdmin(ctx) {
   const t = ctx.texts.admin;
   const data = ctx.dailies;
   const lib = ctx.skills;
+  PAIR = Object.fromEntries((ctx.stats.attrs ?? []).map((a) => [a.key, a.pair]));
   const state = loadDailies(data);
   const mastery = ls.json("gibrid.skills.v1", {});
   const names = ctx.texts.dailies?.attrShort ?? {};
@@ -300,7 +308,7 @@ export function startAdmin(ctx) {
 
   // силы
   const powers = section(t.powers);
-  const max = data.flaskMax;
+  const curve = data.levelCurve;
   for (const key of data.flasks) {
     const f = state.flasks[key] ?? { level: 0, progress: 0 };
     const row = el("div", "adm-pair");
@@ -308,14 +316,14 @@ export function startAdmin(ctx) {
     row.append(
       numField(t.level, f.level, (v) => {
         const s = loadDailies(data);
-        s.flasks[key] = { level: v, progress: Math.min(s.flasks[key]?.progress ?? 0, max - 1) };
+        s.flasks[key] = { level: v, progress: Math.min(s.flasks[key]?.progress ?? 0, levelNeed(curve, v) - 1) };
         ls.set("gibrid.dailies.v1", JSON.stringify(s));
       }),
       numField(t.progress, f.progress, (v) => {
         const s = loadDailies(data);
-        s.flasks[key] = { level: s.flasks[key]?.level ?? 0, progress: Math.min(v, max - 1) };
+        s.flasks[key] = { level: s.flasks[key]?.level ?? 0, progress: Math.min(v, levelNeed(curve, s.flasks[key]?.level ?? 0) - 1) };
         ls.set("gibrid.dailies.v1", JSON.stringify(s));
-      }, { max: max - 1 }),
+      }, { max: levelNeed(curve, f.level) - 1 }),
     );
     powers.append(row);
   }

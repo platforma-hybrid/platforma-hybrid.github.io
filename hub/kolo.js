@@ -4,6 +4,8 @@
 // Год начинается в день весеннего равноденствия («солнце победило тьму»), дата считается по Солнцу.
 // Данные — из ежедневных заданий (событие hub:dailies). Сдача дня — событие hub:day-closed.
 
+import { levelNeed } from "./levels.js";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 const DAY_MS = 86_400_000;
 const MONTHS = 13; // 12 по 30 дней + короткий 13-й
@@ -493,7 +495,7 @@ export function createKolo(box, { texts, character, getDailies, actionButton, ic
     // очки пути за сезон: дни по оценке (сегодня — после сдачи) + недели/месяцы целиком
     dayPoints = days.filter((x) => x.kolo.year === now.year).reduce((sum, x) => sum + (PATH_POINTS[gradeDay(x, d.total)] ?? 0), 0);
     drawPath();
-    todayWill.textContent = fmt(t.todayWill, { next: (d.will?.level ?? 0) + 1, left: (d.max ?? 100) - (d.will?.progress ?? 0) });
+    todayWill.textContent = fmt(t.todayWill, { next: (d.will?.level ?? 0) + 1, left: levelNeed(d.curve ?? d.max ?? 100, d.will?.level ?? 0) - (d.will?.progress ?? 0) });
     // поворот: сегодняшний сектор — наверху, под стрелкой
     const base = -(weekIdx + 0.5) * (360 / stoneN);
     if (angle === null) {

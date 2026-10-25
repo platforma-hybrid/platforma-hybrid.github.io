@@ -8,6 +8,7 @@ import { initAchievements } from "./achievements.js";
 import { initStats, powersBalance } from "./stats.js";
 import { initSkills } from "./skills.js";
 import { initPhone } from "./phone.js";
+import { addPoints, fractionalLevel, levelNeed, migrateFlask } from "./levels.js";
 
 const params = new URLSearchParams(window.location.search);
 const ICONS = "/assets/hub/icons/";
@@ -281,8 +282,9 @@ const components = {
       if (!d) return;
       const will = d.will ?? { level: 0, progress: 0 };
       willLevel.textContent = String(will.level);
-      willProg.textContent = `${will.progress} / ${d.max}`;
-      const lit = Math.round((SEGS * will.progress) / d.max);
+      const need = levelNeed(d.curve ?? d.max, will.level);
+      willProg.textContent = `${will.progress} / ${need}`;
+      const lit = Math.round((SEGS * will.progress) / need);
       segNodes.forEach((node, i) => node.classList.toggle("on", i < lit));
       if (tasksMeta) tasksMeta.textContent = `${d.done} ${texts.dailies.of} ${d.total}${d.closed ? " ✓" : ""}`;
     }
@@ -435,7 +437,7 @@ function freshFlasks(data) {
 }
 
 function loadDailiesState(data) {
-  const fresh = { day: todayKey(), wallet: data.start.wallet, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [] };
+  const fresh = { day: todayKey(), wallet: data.start.wallet, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 2 };
   let saved = null;
   try {
     saved = JSON.parse(window.localStorage.getItem(DAILIES_KEY) ?? "null");
@@ -449,6 +451,12 @@ function loadDailiesState(data) {
   saved.bought ??= [];
   saved.closed ??= false;
   saved.history ??= [];
+  saved.willTasks ??= {};
+  // 24.10: ровная шкала (каждый уровень = flaskMax очков) → лестница уровней; накопленные очки сохраняются
+  if (saved.curveV !== 2) {
+    for (const key of Object.keys(saved.flasks)) saved.flasks[key] = migrateFlask(data.levelCurve, saved.flasks[key], data.flaskMax);
+    saved.curveV = 2;
+  }
   // earned — опыт, заработанный за всё время (для достижений); для старых сохранений — по истории
   saved.earned ??= (saved.history.reduce((sum, h) => sum + (h.done ?? 0), 0) + saved.done.length) * data.reward;
   rollDay(saved, data);
@@ -472,6 +480,7 @@ function rollDay(state, data) {
   state.bought = [];
   state.closed = false;
   state.willBonus = 0;
+  state.willTasks = {};
   return true;
 }
 
@@ -492,8 +501,17 @@ function createDailies(box, ctx) {
   const { texts, dailies: data, editMode } = ctx;
   const t = texts.dailies;
   const reward = data.reward;
+  const curve = data.levelCurve;
+  const W = data.will ?? { perTask: 1, lagging: 1, day: 5, green: 5, balance: 0.1 };
   const max = data.flaskMax;
   const state = loadDailiesState(data);
+  // отстающая сила: её дробный уровень ниже, чем у пары (задание на неё — Воле ещё +1)
+  const pairOf = Object.fromEntries((ctx.stats?.attrs ?? []).map((a) => [a.key, a.pair]));
+  const lagging = (attr) => {
+    const pair = pairOf[attr];
+    if (!pair || !state.flasks[pair] || !state.flasks[attr]) return false;
+    return fractionalLevel(curve, state.flasks[attr]) < fractionalLevel(curve, state.flasks[pair]);
+  };
   saveDailiesState(state);
   box.classList.add("dailies-item");
 
@@ -560,7 +578,15 @@ function createDailies(box, ctx) {
         state.earned = Math.max(0, (state.earned ?? 0) + reward * sign);
         if (check.checked) state.done.push(task.id);
         else state.done = state.done.filter((id) => id !== task.id);
-        addFlask("will", reward * sign);
+        // Воля — двигатель (24.10): за само дело понемногу, за отстающую силу пары — чуть больше
+        if (check.checked) {
+          const gain = W.perTask + (lagging(task.attr) ? W.lagging : 0);
+          state.willTasks[task.id] = gain;
+          addFlask("will", gain);
+        } else {
+          addFlask("will", -(state.willTasks[task.id] ?? W.perTask));
+          delete state.willTasks[task.id];
+        }
         if (data.flasks.includes(task.attr)) addFlask(task.attr, reward * sign);
         commit();
       });
@@ -620,15 +646,19 @@ function createDailies(box, ctx) {
     if (state.closed) return;
     state.closed = true;
     toast(`${t.dayClosed}: ${state.done.length} ${t.of} ${total}`);
-    // «Силы» v2: сдал день в равновесии — Воля держит центр, прибавка к Воле (stats.json → balance.willBonus)
-    if (ctx.stats?.balance && state.done.length) {
-      const bal = powersBalance(ctx.stats, state.flasks, max);
-      if (bal.balanced) {
-        const bonus = Math.max(1, Math.round(state.done.length * reward * (ctx.stats.balance.willBonus ?? 0.1)));
-        addFlask("will", bonus);
-        state.willBonus = bonus;
-        window.setTimeout(() => toast(t.willBonus.replace("{n}", String(bonus))), 1600);
+    // Воля за доведение до конца (24.10): сдал день +day, сделано всё +green; день в равновесии — ещё +10 % дневной Воли
+    if (state.done.length) {
+      let dayWill = W.day + (state.done.length >= total ? W.green : 0);
+      const fromTasks = Object.values(state.willTasks ?? {}).reduce((a, b) => a + b, 0);
+      let balanceBonus = 0;
+      if (ctx.stats?.balance && powersBalance(ctx.stats, state.flasks, curve).balanced) {
+        balanceBonus = Math.max(1, Math.round((fromTasks + dayWill) * (W.balance ?? 0.1)));
+        dayWill += balanceBonus;
       }
+      addFlask("will", dayWill);
+      state.willBonus = dayWill;
+      window.setTimeout(() => toast(t.willDay.replace("{n}", String(dayWill))), 1600);
+      if (balanceBonus) window.setTimeout(() => toast(t.willBonus.replace("{n}", String(balanceBonus))), 3200);
     }
     commit();
     document.dispatchEvent(new CustomEvent("hub:day-closed", { detail: { by: "player" } }));
@@ -683,17 +713,8 @@ function createDailies(box, ctx) {
 
   function addFlask(key, amount) {
     const flask = state.flasks[key];
-    flask.progress += amount;
-    while (flask.progress >= max) {
-      flask.progress -= max;
-      flask.level += 1;
-      toast(t.levelUp[key]);
-    }
-    while (flask.progress < 0 && flask.level > 0) {
-      flask.progress += max;
-      flask.level -= 1;
-    }
-    flask.progress = Math.max(0, flask.progress);
+    const up = addPoints(curve, flask, amount);
+    for (let i = 0; i < up; i++) toast(t.levelUp[key]);
   }
 
   function renderBought() {
@@ -728,12 +749,13 @@ function createDailies(box, ctx) {
     for (const button of buyButtons) button.disabled = state.closed || state.wallet < Number(button.dataset.price);
     for (const [key, node] of Object.entries(flaskNodes)) {
       const flask = state.flasks[key];
-      node.fill.style.width = `${(flask.progress / max) * 100}%`;
-      node.value.textContent = `${flask.progress} / ${max}`;
+      const need = levelNeed(curve, flask.level);
+      node.fill.style.width = `${(flask.progress / need) * 100}%`;
+      node.value.textContent = `${flask.progress} / ${need}`;
       node.level.textContent = String(flask.level);
     }
     renderBought();
-    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks };
+    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks };
     document.dispatchEvent(new CustomEvent("hub:dailies", { detail: lastDailies }));
     board.classList.toggle("closed", state.closed);
     submit.disabled = state.closed;
@@ -1073,7 +1095,14 @@ async function main() {
     startEditMode(ctx, { placeItem, fitStage });
   }
   // Режим «Числа» (?admin=1): проверочные числа поверх настоящего прогресса; пока проверка идёт — полоса «ПРОВЕРКА»
-  if (!ctx.editMode && (params.get("admin") === "1" || window.localStorage.getItem("gibrid.admin.real") !== null)) {
+  // хранилище браузера бывает закрыто (приватный режим, встроенные браузеры) — тогда обращение бросает ошибку (ревизия 24.10, п. 3.1)
+  let sandboxSaved = false;
+  try {
+    sandboxSaved = window.localStorage.getItem("gibrid.admin.real") !== null;
+  } catch {
+    sandboxSaved = false;
+  }
+  if (!ctx.editMode && (params.get("admin") === "1" || sandboxSaved)) {
     const { startAdmin, showSandboxBanner, sandboxOn } = await import("./admin.js");
     if (params.get("admin") === "1") startAdmin(ctx);
     if (sandboxOn()) showSandboxBanner(texts);

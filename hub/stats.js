@@ -6,6 +6,7 @@
 // Разбор силы (второй экран) — на фоне bg_powers_detail: медальон и столбики, «Откуда прибавка», лестница.
 
 import { PATH_POINTS, gradeDay, koloDate } from "./kolo.js";
+import { fractionalLevel, levelNeed } from "./levels.js";
 
 const SEEN_KEY = "gibrid.stats.seen.v1";
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -102,9 +103,12 @@ export function gainByAttr(d, days) {
 // flasks — колбы из ежедневок; очки силы = число × max + прогресс. Сила «в разработке» и её пара в равновесие не входят.
 export function powersBalance(lib, flasks, max = 100) {
   const B = lib.balance ?? {};
+  // max — число (старая ровная шкала) или лестница уровней (24.10); по лестнице считаем по видимым числам:
+  // «сотые уровня» (7 и половина пути → 750), чтобы пороги равновесия остались прежними
   const pts = (key) => {
     const f = flasks?.[key];
-    return f ? (f.level ?? 0) * max + (f.progress ?? 0) : 0;
+    if (!f) return 0;
+    return typeof max === "number" ? (f.level ?? 0) * max + (f.progress ?? 0) : fractionalLevel(max, f) * 100;
   };
   const val = Object.fromEntries(lib.attrs.map((a) => [a.key, pts(a.key)]));
   const byKey = Object.fromEntries(lib.attrs.map((a) => [a.key, a]));
@@ -346,9 +350,9 @@ export function initStats(ctx, getDailies) {
   // ---------- отрисовка ----------
 
   function stateOf(key, d) {
-    const max = d?.max ?? 100;
     const flask = d?.flasks?.[key];
-    return { level: flask?.level ?? 0, progress: flask?.progress ?? 0, max };
+    const level = flask?.level ?? 0;
+    return { level, progress: flask?.progress ?? 0, max: levelNeed(d?.curve ?? d?.max ?? 100, level) };
   }
 
   function renderCircle(bal, hasForm = true) {
@@ -595,7 +599,7 @@ export function initStats(ctx, getDailies) {
     const gain = gainByAttr(d, lib.gainDays);
     const empty = !(d?.history?.length) && !(d?.done);
     win.classList.toggle("st-empty-state", empty);
-    const bal = powersBalance(lib, d?.flasks, d?.max ?? 100);
+    const bal = powersBalance(lib, d?.flasks, d?.curve ?? d?.max ?? 100);
     for (const a of lib.attrs) {
       const node = nodes[a.key];
       const on = selected === a.key;
