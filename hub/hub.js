@@ -2,13 +2,13 @@
 // Тексты — hub.texts.json, данные персонажа — mock.character.json (позже — API).
 // Параметры адреса: ?edit=1 — режим правки раскладки, ?anim=0 — без анимаций.
 
-import { createKolo, monthStats } from "./kolo.js";
+import { createKolo, gradeDay, monthStats } from "./kolo.js";
 import { initQuests } from "./quests.js";
 import { initAchievements } from "./achievements.js";
 import { initStats, powersBalance } from "./stats.js";
 import { initSkills } from "./skills.js";
 import { initPhone } from "./phone.js";
-import { addPoints, fractionalLevel, levelNeed, migrateFlask } from "./levels.js";
+import { addPoints, convertFlask, fractionalLevel, levelNeed, migrateFlask } from "./levels.js";
 
 const params = new URLSearchParams(window.location.search);
 const ICONS = "/assets/hub/icons/";
@@ -282,7 +282,7 @@ const components = {
       if (!d) return;
       const will = d.will ?? { level: 0, progress: 0 };
       willLevel.textContent = String(will.level);
-      const need = levelNeed(d.curve ?? d.max, will.level);
+      const need = levelNeed(d.willCurve ?? d.curve ?? d.max, will.level);
       willProg.textContent = `${will.progress} / ${need}`;
       const lit = Math.round((SEGS * will.progress) / need);
       segNodes.forEach((node, i) => node.classList.toggle("on", i < lit));
@@ -437,7 +437,7 @@ function freshFlasks(data) {
 }
 
 function loadDailiesState(data) {
-  const fresh = { day: todayKey(), wallet: data.start.wallet, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 2 };
+  const fresh = { day: todayKey(), wallet: data.start.wallet, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3 };
   let saved = null;
   try {
     saved = JSON.parse(window.localStorage.getItem(DAILIES_KEY) ?? "null");
@@ -456,6 +456,11 @@ function loadDailiesState(data) {
   if (saved.curveV !== 2) {
     for (const key of Object.keys(saved.flasks)) saved.flasks[key] = migrateFlask(data.levelCurve, saved.flasks[key], data.flaskMax);
     saved.curveV = 2;
+  }
+  // 25.10: у Воли своя лестница (втрое дороже) — очки Воли сохраняются, уровень пересчитывается
+  if (saved.curveV === 2) {
+    if (data.willCurve && saved.flasks.will) saved.flasks.will = convertFlask(data.levelCurve, data.willCurve, saved.flasks.will);
+    saved.curveV = 3;
   }
   // earned — опыт, заработанный за всё время (для достижений); для старых сохранений — по истории
   saved.earned ??= (saved.history.reduce((sum, h) => sum + (h.done ?? 0), 0) + saved.done.length) * data.reward;
@@ -502,7 +507,9 @@ function createDailies(box, ctx) {
   const t = texts.dailies;
   const reward = data.reward;
   const curve = data.levelCurve;
-  const W = data.will ?? { perTask: 1, lagging: 1, day: 5, green: 5, balance: 0.1 };
+  const willCurve = data.willCurve ?? curve;
+  const curveOf = (key) => (key === "will" ? willCurve : curve);
+  const W = data.will ?? { perTask: 1, lagging: 1, day: { red: 1, yellow: 5, green: 12 }, balance: 0.1 };
   const max = data.flaskMax;
   const state = loadDailiesState(data);
   // отстающая сила: её дробный уровень ниже, чем у пары (задание на неё — Воле ещё +1)
@@ -646,9 +653,10 @@ function createDailies(box, ctx) {
     if (state.closed) return;
     state.closed = true;
     toast(`${t.dayClosed}: ${state.done.length} ${t.of} ${total}`);
-    // Воля за доведение до конца (24.10): сдал день +day, сделано всё +green; день в равновесии — ещё +10 % дневной Воли
+    // Воля за сданный день (25.10): по цвету дня — красный +1, жёлтый +5, зелёный +12; день в равновесии — ещё +10 % дневной Воли
     if (state.done.length) {
-      let dayWill = W.day + (state.done.length >= total ? W.green : 0);
+      const grade = gradeDay({ closedBy: "player", done: state.done.length }, total) ?? "red";
+      let dayWill = W.day?.[grade] ?? 0;
       const fromTasks = Object.values(state.willTasks ?? {}).reduce((a, b) => a + b, 0);
       let balanceBonus = 0;
       if (ctx.stats?.balance && powersBalance(ctx.stats, state.flasks, curve).balanced) {
@@ -713,7 +721,7 @@ function createDailies(box, ctx) {
 
   function addFlask(key, amount) {
     const flask = state.flasks[key];
-    const up = addPoints(curve, flask, amount);
+    const up = addPoints(curveOf(key), flask, amount);
     for (let i = 0; i < up; i++) toast(t.levelUp[key]);
   }
 
@@ -749,13 +757,13 @@ function createDailies(box, ctx) {
     for (const button of buyButtons) button.disabled = state.closed || state.wallet < Number(button.dataset.price);
     for (const [key, node] of Object.entries(flaskNodes)) {
       const flask = state.flasks[key];
-      const need = levelNeed(curve, flask.level);
+      const need = levelNeed(curveOf(key), flask.level);
       node.fill.style.width = `${(flask.progress / need) * 100}%`;
       node.value.textContent = `${flask.progress} / ${need}`;
       node.level.textContent = String(flask.level);
     }
     renderBought();
-    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks };
+    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks };
     document.dispatchEvent(new CustomEvent("hub:dailies", { detail: lastDailies }));
     board.classList.toggle("closed", state.closed);
     submit.disabled = state.closed;

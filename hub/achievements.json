@@ -45,8 +45,7 @@
     },
     {
       "key": "agility",
-      "name": "Ловкость",
-      "dev": true
+      "name": "Ловкость"
     }
   ],
   "higher": []

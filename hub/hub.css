@@ -2028,3 +2028,8 @@ html.is-phone #stage .item.ui-scaled { display: none; }
   background: #b5341f; color: #fff; border-radius: 0 0 8px 8px; font: 14px system-ui, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
 .adm-banner b { letter-spacing: 0.1em; }
 .adm-banner a, .adm-banner button { color: #fff; background: rgba(0, 0, 0, 0.3); border: 0; border-radius: 4px; padding: 3px 8px; font: inherit; cursor: pointer; text-decoration: none; }
+.sk-seed { fill: none; stroke: rgba(232, 194, 122, 0.35); stroke-width: 1; stroke-dasharray: 2 4; }
+
+/* Ловкость (25.10) */
+.dailies-tag.tag-agility { color:#e6f59a; border-color:#6f8a1d; }
+.flask-agility .dailies-fill { background: linear-gradient(180deg,#e6f59a,#b5cf3f 50%,#6f8a1d); }

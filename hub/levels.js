@@ -46,3 +46,17 @@ export function migrateFlask(curve, flask, oldMax) {
   addPoints(curve, out, total);
   return out;
 }
+
+/** Все очки колбы по лестнице: сумма цен пройденных уровней + очки внутри текущего. */
+export function totalPoints(curve, flask) {
+  let total = flask?.progress ?? 0;
+  for (let l = 0; l < (flask?.level ?? 0); l++) total += levelNeed(curve, l);
+  return total;
+}
+
+/** Перевод колбы с одной лестницы на другую (25.10: Воля — своя лестница, втрое дороже): очки сохраняются, уровень пересчитывается. */
+export function convertFlask(fromCurve, toCurve, flask) {
+  const out = { level: 0, progress: 0 };
+  addPoints(toCurve, out, totalPoints(fromCurve, flask));
+  return out;
+}

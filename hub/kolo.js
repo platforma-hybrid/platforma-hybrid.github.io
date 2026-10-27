@@ -12,7 +12,7 @@ const MONTHS = 13; // 12 по 30 дней + короткий 13-й
 export const MONTH_DAYS = 30; // 3 недели по 10 дней
 export const WEEK_DAYS = 10;
 const TZ_MS = 3 * 3_600_000; // время равноденствия — по Москве (Крым)
-const ATTR_COLORS = { strength: "#ff5a3a", endurance: "#2fe0a8", order: "#a98bff", morality: "#5ab4ff", calm: "#c9d6ff", will: "#ffb347" };
+const ATTR_COLORS = { strength: "#ff5a3a", endurance: "#2fe0a8", agility: "#e6f59a", order: "#a98bff", morality: "#5ab4ff", calm: "#c9d6ff", will: "#ffb347" };
 
 // ---------- календарь коло ----------
 
@@ -495,7 +495,7 @@ export function createKolo(box, { texts, character, getDailies, actionButton, ic
     // очки пути за сезон: дни по оценке (сегодня — после сдачи) + недели/месяцы целиком
     dayPoints = days.filter((x) => x.kolo.year === now.year).reduce((sum, x) => sum + (PATH_POINTS[gradeDay(x, d.total)] ?? 0), 0);
     drawPath();
-    todayWill.textContent = fmt(t.todayWill, { next: (d.will?.level ?? 0) + 1, left: levelNeed(d.curve ?? d.max ?? 100, d.will?.level ?? 0) - (d.will?.progress ?? 0) });
+    todayWill.textContent = fmt(t.todayWill, { next: (d.will?.level ?? 0) + 1, left: levelNeed(d.willCurve ?? d.curve ?? d.max ?? 100, d.will?.level ?? 0) - (d.will?.progress ?? 0) });
     // поворот: сегодняшний сектор — наверху, под стрелкой
     const base = -(weekIdx + 0.5) * (360 / stoneN);
     if (angle === null) {

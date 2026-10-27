@@ -175,7 +175,7 @@ function parseDay(key) {
 }
 // сколько очков силы дал день: Воле — каждое дело (и бонус равновесия), остальным — дела своей силы
 function dayGain(rec, key, reward) {
-  if (key === "will") return (rec.done ?? 0) * reward + (rec.willBonus ?? 0);
+  if (key === "will") return (rec.done ?? 0) + (rec.willBonus ?? 0); // 25.10: Воля +1 за дело + за сданный день
   return (rec.attrs?.[key] ?? 0) * reward;
 }
 // сегодняшний день как запись истории (ещё не закрыт)
@@ -352,7 +352,8 @@ export function initStats(ctx, getDailies) {
   function stateOf(key, d) {
     const flask = d?.flasks?.[key];
     const level = flask?.level ?? 0;
-    return { level, progress: flask?.progress ?? 0, max: levelNeed(d?.curve ?? d?.max ?? 100, level) };
+    const curve = key === "will" ? d?.willCurve ?? d?.curve : d?.curve;
+    return { level, progress: flask?.progress ?? 0, max: levelNeed(curve ?? d?.max ?? 100, level) };
   }
 
   function renderCircle(bal, hasForm = true) {

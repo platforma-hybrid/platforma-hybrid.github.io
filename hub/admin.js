@@ -3,6 +3,7 @@
 // «Вернуть моё» кладёт его обратно. Пока проверка идёт — сверху висит заметная полоса «ПРОВЕРКА».
 // Подопечные и забота навыков (растения, питомцы) не трогаются никогда.
 
+import { gradeDay } from "./kolo.js";
 import { addPoints, fractionalLevel, levelNeed } from "./levels.js";
 
 const KEYS = ["gibrid.dailies.v1", "gibrid.quests.v1", "gibrid.achievements.v1", "gibrid.skills.v1", "gibrid.stats.seen.v1"];
@@ -59,7 +60,7 @@ function daysAgo(n) {
 // ---------- модель ----------
 
 function freshDailies(data) {
-  return { day: dayKey(new Date()), wallet: 0, earned: 0, flasks: structuredClone(data.start.flasks), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 2 };
+  return { day: dayKey(new Date()), wallet: 0, earned: 0, flasks: structuredClone(data.start.flasks), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3 };
 }
 function loadDailies(data) {
   const s = ls.json("gibrid.dailies.v1", null);
@@ -85,13 +86,13 @@ function renumberHistory(state) {
 function activeTasks(data) {
   return data.groups.flatMap((g) => g.tasks).filter((t) => t.attr && t.attr !== "dev");
 }
-// один сданный день — по тем же правилам, что доска заданий (24.10): сила +reward за дело; Воля +1 за дело,
-// +1 за отстающую силу пары, +5 за сданный день, +5 если сделано всё (прибавка за равновесие здесь не считается)
+// один сданный день — по тем же правилам, что доска заданий (25.10): сила +reward за дело; Воля +1 за дело,
+// +1 за отстающую силу пары; сданный день по цвету — красный +1, жёлтый +5, зелёный +12 (прибавка за равновесие здесь не считается)
 let PAIR = {};
 function playDay(state, data, tasks) {
   const r = data.reward;
   const curve = data.levelCurve;
-  const W = data.will ?? { perTask: 1, lagging: 1, day: 5, green: 5 };
+  const W = data.will ?? { perTask: 1, lagging: 1, day: { red: 1, yellow: 5, green: 12 } };
   const attrs = {};
   let will = 0;
   for (const t of tasks) {
@@ -103,9 +104,10 @@ function playDay(state, data, tasks) {
     if (data.flasks.includes(t.attr)) addFlask(state, t.attr, r, curve);
     attrs[t.attr] = (attrs[t.attr] ?? 0) + 1;
   }
-  if (tasks.length) will += W.day + (tasks.length >= activeTasks(data).length ? W.green : 0);
-  addFlask(state, "will", will, curve);
-  state.history.push({ day: "", done: tasks.length, ids: tasks.map((t) => t.id), attrs, spent: 0, closedBy: "player", willBonus: tasks.length ? W.day : 0 });
+  let dayWill = 0;
+  if (tasks.length) dayWill = W.day?.[gradeDay({ closedBy: "player", done: tasks.length }, activeTasks(data).length) ?? "red"] ?? 0;
+  addFlask(state, "will", will + dayWill, data.willCurve ?? curve);
+  state.history.push({ day: "", done: tasks.length, ids: tasks.map((t) => t.id), attrs, spent: 0, closedBy: "player", willBonus: dayWill });
   state.history = state.history.slice(-400);
 }
 // выбрать задания дня: доля от всех, с уклоном в одну силу
@@ -308,8 +310,8 @@ export function startAdmin(ctx) {
 
   // силы
   const powers = section(t.powers);
-  const curve = data.levelCurve;
   for (const key of data.flasks) {
+    const curve = key === "will" ? data.willCurve ?? data.levelCurve : data.levelCurve;
     const f = state.flasks[key] ?? { level: 0, progress: 0 };
     const row = el("div", "adm-pair");
     row.append(el("span", "adm-name", attrName[key] ?? (key === "will" ? t.will : key)));
