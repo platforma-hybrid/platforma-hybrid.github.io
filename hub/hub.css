@@ -2033,3 +2033,403 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 /* Ловкость (25.10) */
 .dailies-tag.tag-agility { color:#e6f59a; border-color:#6f8a1d; }
 .flask-agility .dailies-fill { background: linear-gradient(180deg,#e6f59a,#b5cf3f 50%,#6f8a1d); }
+
+/* «мои задания дня» + библиотека (26.10, SPEC_TASKS.md): слева выбранные дела по силам, справа — библиотека */
+.dailies-cols.with-lib { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: start; }
+.dailies-mine { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; align-content: start; min-width: 0; }
+.dailies-empty { margin: 0; padding: 12px; color: #9c8c6c; font-size: 18px; }
+.dailies-lib { min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 8px 12px 10px;
+  background: rgba(16, 14, 11, 0.9); border: 1px solid rgba(201, 149, 62, 0.45); border-radius: 6px; }
+.dailies-lib-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 4px; border-bottom: 1px solid rgba(201, 149, 62, 0.35); }
+.dailies-lib-head h3 { margin: 0; font-family: var(--font-title); font-size: 24px; color: var(--gold); }
+.dailies-lib-count { font-size: 14px; color: #cdbb98; white-space: nowrap; }
+.dailies-keeper { margin: 0; padding: 6px 10px; font-size: 15px; line-height: 1.35; color: #d6eef6; background: rgba(20, 38, 42, 0.7); border: 1px solid #2f5566; border-radius: 4px; }
+.dailies-keeper b { color: #9cc4d4; }
+.dailies-lib-warn { margin: 0; font-size: 14px; color: #f0c26e; }
+.dailies-lib-group { display: flex; flex-direction: column; gap: 4px; }
+.dailies-lib-title { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); }
+.dailies-lib-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.dailies-chip { appearance: none; font: inherit; font-size: 14px; line-height: 1.2; text-align: left; cursor: pointer;
+  color: #cdbb98; background: transparent; border: 1px solid rgba(201, 149, 62, 0.4); border-radius: 14px; padding: 4px 10px; }
+.dailies-chip.on { color: #f6e7c6; background: rgba(201, 149, 62, 0.22); border-color: var(--gold); font-weight: 700; }
+.dailies-chip:hover:not(:disabled) { border-color: var(--gold); }
+.dailies-chip:disabled { opacity: 0.45; cursor: default; }
+.dailies-chip.on:disabled { opacity: 0.8; }
+.dailies-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.dailies-board:not(.in-quests) .dailies-chip { font-size: 18px; }
+.modal-quests .in-quests .dailies-cols.with-lib { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); overflow: hidden; }
+.modal-quests .in-quests .dailies-mine, .modal-quests .in-quests .dailies-lib { max-height: 404px; overflow-y: auto; box-sizing: border-box;
+  scrollbar-width: thin; scrollbar-color: #c9953e transparent; }
+.ph-sheet .dailies-cols.with-lib { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.ph-sheet .dailies-mine { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ph-sheet .dailies-chip { font-size: 22px; }
+.ph-sheet .dailies-keeper, .ph-sheet .dailies-lib-warn { font-size: 20px; }
+.modal-quests .in-quests .dailies-cols.with-lib { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); }
+.modal-quests .in-quests .dailies-lib .dailies-keeper { font-size: 14px; line-height: 1.3; padding: 4px 8px; }
+.modal-quests .in-quests .dailies-lib-warn { font-size: 13px; }
+.modal-quests .in-quests .dailies-lib-head h3 { font-size: 20px; }
+.modal-quests .in-quests .dailies-chip { font-size: 15px; }
+.ph-art-small .modal-quests .in-quests .dailies-chip { font-size: 22px; }
+.ph-art-small .modal-quests .in-quests .dailies-lib .dailies-keeper { font-size: 20px; }
+/* 27.10, автор: окно заданий — как было (группы во всю ширину), библиотека — отдельным входом по кнопке */
+.dailies-cols.with-lib, .modal-quests .in-quests .dailies-cols.with-lib, .ph-sheet .dailies-cols.with-lib { display: block; }
+.dailies-mine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ph-sheet .dailies-mine { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dailies-lib { display: none; }
+.dailies-board.lib-open .dailies-lib { display: flex; }
+.dailies-board.lib-open .dailies-mine { display: none; }
+.dailies-lib-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; align-content: start; }
+.modal-quests .in-quests .dailies-lib { height: 404px; }
+.dailies-lib-btn { appearance: none; flex: none; cursor: pointer; font-family: var(--font-title); font-weight: 700; font-size: 22px; color: var(--gold);
+  padding: 6px 16px; background: rgba(201, 149, 62, 0.12); border: 1px solid var(--gold); border-radius: 4px; white-space: nowrap; }
+.dailies-lib-btn:hover { background: rgba(201, 149, 62, 0.25); box-shadow: 0 0 12px rgba(255, 200, 110, 0.4); }
+.dailies-lib-btn[aria-expanded="true"] { color: #2a1408; background: linear-gradient(180deg, #ffd27a, #e8a23a); }
+.dailies-lib-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.modal-quests .in-quests .dailies-lib-btn { font-size: 18px; padding: 4px 12px; }
+.ph-sheet .dailies-lib-btn { font-size: 28px; }
+/* библиотека графами по силам (27.10): как окно заданий; строка — кнопка «взять / убрать»; «в разработке» — серым */
+.dailies-lib-groups { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
+.dailies-lib-row { appearance: none; width: 100%; font: inherit; color: inherit; text-align: left; background: none; border: 0;
+  border-bottom: 1px dashed rgba(236, 196, 116, 0.25); }
+.dailies-lib-row:last-child { border-bottom: 0; }
+.dailies-lib-row .dailies-task-name { color: #cdbb98; }
+.dailies-lib-row.on .dailies-task-name { color: #f6e7c6; font-weight: 700; }
+.dailies-lib-mark { flex: none; width: 1.3em; text-align: center; font-weight: 700; color: var(--gold); }
+.dailies-lib-row.on .dailies-lib-mark { color: #4fd06a; }
+.dailies-lib-row:hover:not(:disabled) .dailies-task-name { color: #fff1c4; }
+.dailies-lib-row:disabled { cursor: default; }
+.dailies-lib-row:disabled:not(.on):not(.dev) { opacity: 0.5; }
+.dailies-lib-row.dev { opacity: 0.55; font-style: italic; }
+.dailies-lib-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.modal-quests .in-quests .dailies-lib-col { padding: 4px 10px 6px; }
+.modal-quests .in-quests .dailies-lib-row { font-size: 16px; }
+/* слабостей стало больше (27.10: курение, фастфуд, соцсети…) — в окне заданий полоса листается вбок, ничего не обрезается */
+.modal-quests .in-quests .dailies-buys { min-width: 0; flex-wrap: wrap; gap: 4px 6px; }
+.modal-quests .in-quests .dailies-buy { font-size: 13px; padding: 3px 8px; gap: 8px; }
+.modal-quests .in-quests .dailies-yellow { min-width: 0; }
+/* подходы «+N» (27.10): кружки подходов, отмена ↶, кнопка «+20»; 1-й, 3-й и 5-й кружок крупнее — лёгкая / средняя / сложная */
+.dailies-sets { cursor: default; }
+.dailies-sets-info { color: #9fd9a8; font-size: 0.8em; white-space: nowrap; }
+.dailies-dots { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.dailies-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #c9953e; box-sizing: border-box; }
+.dailies-dot.big { width: 13px; height: 13px; }
+.dailies-dot.on { background: #4fd06a; border-color: #4fd06a; }
+.dailies-undo-set, .dailies-plus { appearance: none; font: inherit; cursor: pointer; flex: none; line-height: 1.1; }
+.dailies-undo-set { color: #cdbb98; background: none; border: 1px solid rgba(236, 196, 116, 0.45); border-radius: 4px; padding: 1px 6px; font-size: 0.85em; }
+.dailies-undo-set[hidden] { display: none; }
+.dailies-plus { color: #0d2a13; font-weight: 700; background: #4fd06a; border: 0; border-radius: 4px; padding: 2px 10px; font-size: 0.9em; white-space: nowrap; }
+.dailies-plus:hover:not(:disabled) { box-shadow: 0 0 10px rgba(79, 208, 106, 0.6); }
+.dailies-plus:disabled { background: #2e4a33; color: #8aa98f; cursor: default; }
+.dailies-undo-set:focus-visible, .dailies-plus:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.dailies-sets.capped .dailies-pts { color: #9fd9a8; font-size: 0.8em; }
+.dailies-board.closed .dailies-sets { opacity: 0.7; }
+.dailies-sets .dailies-task-name { display: flex; flex-direction: column; line-height: 1.15; }
+.dailies-sets.done .dailies-task-name { text-decoration: none; color: #f6e7c6; }
+.dailies-sets-info { display: block; }
+/* ступени (27.10): «↑ Взять новую сложность» и «↓ Вернуть прежнюю» — маленькими ссылками под названием задания */
+.dailies-step-acts { display: flex; gap: 8px; }
+.dailies-step-btn { appearance: none; font: inherit; font-size: 0.78em; cursor: pointer; background: none; border: 0; padding: 1px 0; text-decoration: underline; text-underline-offset: 3px; }
+.dailies-step-btn.up { color: #ffd27a; font-weight: 700; }
+.dailies-step-btn.down { color: #cdbb98; }
+.dailies-step-btn[hidden] { display: none; }
+.dailies-step-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* Кошелёк (27.10, SPEC_WALLET.md): счёт в углу + окно «Кошелёк» с Казной */
+.wallet-plank { position: relative; display: inline-flex; align-items: center; gap: 18px; padding: 0 40px; height: 100%; min-height: 56px; cursor: pointer; font: inherit; color: var(--gold); white-space: nowrap; }
+.wallet-part { display: inline-flex; align-items: baseline; gap: 10px; }
+.wallet-label { font-size: 22px; color: #cdbb98; }
+.wallet-label.store { color: #9cc4d4; }
+.wallet-num { font-family: var(--font-title); font-size: 38px; color: #f0d89a; font-variant-numeric: tabular-nums; }
+.wallet-num.store { color: #a9dcf0; }
+.wallet-sep { width: 1px; align-self: stretch; margin: 10px 0; background: rgba(201, 149, 62, 0.5); }
+.wallet-flash { position: absolute; right: 10px; top: -18px; font-weight: 700; font-size: 24px; padding: 2px 12px; border-radius: 12px; opacity: 0; transition: opacity 0.3s, transform 0.6s; pointer-events: none; }
+.wallet-flash.on { opacity: 1; transform: translateY(-6px); }
+.wallet-flash.up { color: #a8dba0; background: #1f2e1d; }
+.wallet-flash.down { color: #f0b08f; background: #33211a; }
+.wallet-plank:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .wallet-flash { transition: none; } }
+
+.modal.modal-wallet { width: 1100px; max-width: calc(100vw - 40px); }
+.wallet-window { display: flex; flex-direction: column; gap: 14px; text-align: left; color: #f6e7c6; font-size: 18px; }
+.wallet-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.wallet-big { display: flex; flex-direction: column; gap: 2px; padding: 10px 18px; border: 1px solid rgba(201, 149, 62, 0.5); border-radius: 6px; background: rgba(0, 0, 0, 0.28); }
+.wallet-big.store { border-color: #2f5566; background: rgba(20, 38, 42, 0.5); }
+.wallet-big-label { font-size: 15px; letter-spacing: 1px; text-transform: uppercase; color: #cdbb98; }
+.wallet-big.store .wallet-big-label, .wallet-big.store .wallet-big-hint { color: #9cc4d4; }
+.wallet-big b { font-family: var(--font-title); font-size: 40px; color: #f0d89a; line-height: 1.1; }
+.wallet-big.store b { color: #a9dcf0; }
+.wallet-big-hint { font-size: 14px; color: #b3a385; }
+.wallet-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid rgba(201, 149, 62, 0.4); }
+.wallet-tab { appearance: none; font: inherit; font-size: 17px; cursor: pointer; color: #b3a385; background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px; min-height: 44px; }
+.wallet-tab.on { color: #f3d58c; border-bottom-color: var(--gold); font-weight: 700; }
+.wallet-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.wallet-pane { min-height: 300px; max-height: 440px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #c9953e transparent; }
+.wallet-kazna { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+.wallet-hist { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px; border: 1px solid rgba(201, 149, 62, 0.4); border-radius: 6px; background: rgba(0, 0, 0, 0.28); }
+.wallet-day-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(201, 149, 62, 0.3); padding-bottom: 4px; margin-bottom: 4px;
+  font-family: var(--font-title); font-size: 21px; color: var(--gold); }
+.wallet-day-total { font-family: var(--font-text); font-size: 15px; color: #b3a385; }
+.wallet-row { display: flex; gap: 14px; align-items: baseline; padding: 2px 0; }
+.wallet-row b { min-width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+.up { color: #a8dba0; }
+.down { color: #f0b08f; }
+.wallet-empty { margin: 0; color: #9c8c6c; font-size: 16px; }
+.wallet-side { display: flex; flex-direction: column; gap: 12px; }
+.wallet-card { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border: 1px solid rgba(201, 149, 62, 0.4); border-radius: 6px; background: rgba(0, 0, 0, 0.28); }
+.wallet-card-title { font-size: 14px; letter-spacing: 1px; text-transform: uppercase; color: #b3a385; }
+.wallet-line { display: flex; justify-content: space-between; gap: 12px; }
+.wallet-line .store { color: #a9dcf0; }
+.wallet-line.soon { color: #9c8c6c; }
+.wallet-soon { padding: 24px 28px; border: 1px solid rgba(201, 149, 62, 0.4); border-radius: 6px; background: rgba(0, 0, 0, 0.28); }
+.wallet-soon h3 { margin: 0 0 10px; font-family: var(--font-title); font-size: 28px; color: var(--gold); }
+.wallet-soon p { margin: 0 0 14px; line-height: 1.5; color: #e9dcc0; max-width: 760px; }
+.wallet-soon-tag { display: inline-block; padding: 3px 12px; border: 1px solid rgba(201, 149, 62, 0.5); border-radius: 12px; color: #cdbb98; font-size: 14px; }
+.ph-modal .modal.modal-wallet .wallet-kazna { grid-template-columns: minmax(0, 1fr); }
+.wallet-plank { width: 100%; box-sizing: border-box; justify-content: center; }
+.wallet-plank { padding: 0 56px; }
+.wallet-label { font-size: 26px; }
+.wallet-num { font-size: 40px; }
+.modal-wallet .wallet-soon p { font-size: 18px; }
+.modal-wallet .wallet-soon h3 { font-size: 26px; }
+/* подходы без яркой кнопки (27.10): кружки — это и есть кнопка; число подхода — в названии; награда — приглушённым золотом */
+.dailies-sets.ui-dots .dailies-plus { display: none; }
+.dailies-sets.ui-dots .dailies-dots { gap: 7px; }
+.dailies-sets.ui-dots .dailies-dot { appearance: none; padding: 0; cursor: default; background: none; width: 16px; height: 16px; border: 2px solid rgba(201, 149, 62, 0.7); }
+.dailies-sets.ui-dots .dailies-dot.big { width: 20px; height: 20px; }
+.dailies-sets.ui-dots .dailies-dot.on { background: #4fd06a; border-color: #4fd06a; cursor: pointer; }
+.dailies-sets.ui-dots .dailies-dot.next { cursor: pointer; border-color: #e8c27a; box-shadow: 0 0 0 2px rgba(232, 194, 122, 0.18); }
+.dailies-sets.ui-dots .dailies-dot.next:hover { background: rgba(232, 194, 122, 0.35); box-shadow: 0 0 10px rgba(232, 194, 122, 0.6); }
+.dailies-sets.ui-dots .dailies-dot:disabled:not(.on) { opacity: 0.6; }
+.dailies-sets.ui-dots .dailies-dot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.dailies-sets .dailies-pts { color: #c9a85a; font-weight: 400; }
+/* вариант «кнопка» — в стиле камня и золота */
+.dailies-sets.ui-button .dailies-plus { color: #f3d58c; background: rgba(16, 14, 11, 0.9); border: 1px solid #c9953e; }
+.dailies-sets.ui-button .dailies-plus:hover:not(:disabled) { box-shadow: 0 0 10px rgba(232, 194, 122, 0.5); }
+.dailies-sets.ui-button .dailies-plus:disabled { color: #8a7a5a; background: none; border-color: rgba(201, 149, 62, 0.35); }
+.ph-sheet .dailies-sets.ui-dots .dailies-dot { width: 30px; height: 30px; }
+.ph-sheet .dailies-sets.ui-dots .dailies-dot.big { width: 36px; height: 36px; }
+/* подходы римскими цифрами (27.10): I II III IV V — сделанные горят золотом, следующий обведён; III и V — средняя и сложная */
+.dailies-sets.ui-roman .dailies-plus { display: none; }
+.dailies-sets.ui-roman .dailies-dots { gap: 4px; }
+.dailies-sets.ui-roman .dailies-dot { appearance: none; width: auto; height: auto; min-width: 26px; padding: 1px 4px; border-radius: 3px; cursor: default;
+  font-family: var(--font-title); font-weight: 700; font-size: 0.82em; line-height: 1.2; letter-spacing: 0.5px; text-align: center;
+  color: rgba(201, 149, 62, 0.55); background: none; border: 1px solid rgba(201, 149, 62, 0.3); }
+.dailies-sets.ui-roman .dailies-dot.big { border-color: rgba(201, 149, 62, 0.55); }
+.dailies-sets.ui-roman .dailies-dot.on { color: #2a1408; background: linear-gradient(180deg, #ffd27a, #c9953e); border-color: #e8c27a; cursor: pointer; }
+.dailies-sets.ui-roman .dailies-dot.next { color: #f3d58c; border-color: #e8c27a; cursor: pointer; }
+.dailies-sets.ui-roman .dailies-dot.next:hover { background: rgba(232, 194, 122, 0.2); box-shadow: 0 0 10px rgba(232, 194, 122, 0.5); }
+.dailies-sets.ui-roman .dailies-dot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ph-sheet .dailies-sets.ui-roman .dailies-dot { min-width: 44px; font-size: 1em; padding: 4px 6px; }
+/* телефон: окно «Задания» уменьшено целиком — таблички подходов крупнее, чтобы попадать пальцем */
+.ph-modal .modal-quests .in-quests .dailies-sets.ui-roman .dailies-dot { min-width: 44px; font-size: 24px; padding: 4px 8px; }
+.ph-modal .modal-quests .in-quests .dailies-sets.ui-roman .dailies-dots { gap: 8px; }
+.ph-modal .modal-quests .in-quests .dailies-undo-set { font-size: 24px; padding: 2px 10px; }
+
+/* Почта (27.10, SPEC_MAIL.md): письма Мира и хранителей; печати — Мир ☉ золото, Хранитель меры — голубая, Хранитель Казны — бронза */
+.mail-badge[hidden] { display: none; }
+.modal.modal-mail { width: 1100px; max-width: calc(100vw - 40px); }
+.mail-window { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; text-align: left; font-size: 18px; color: #f6e7c6; min-height: 420px; }
+.mail-list { display: flex; flex-direction: column; gap: 6px; max-height: 520px; overflow-y: auto; padding: 10px; border: 1px solid rgba(201, 149, 62, 0.4); border-radius: 6px; background: rgba(0, 0, 0, 0.28);
+  scrollbar-width: thin; scrollbar-color: #c9953e transparent; }
+.mail-day { padding: 6px 6px 2px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #b3a385; }
+.mail-row { appearance: none; font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 6px 10px;
+  border: 1px solid rgba(201, 149, 62, 0.25); border-radius: 6px; background: rgba(20, 16, 12, 0.6); }
+.mail-row.open { border-color: var(--gold); background: rgba(58, 46, 31, 0.6); }
+.mail-row:hover { border-color: rgba(232, 194, 122, 0.7); }
+.mail-row:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mail-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mail-row-title { font-size: 16px; }
+.mail-row.new .mail-row-title { font-weight: 700; }
+.mail-row-from { font-size: 13px; color: #b3a385; }
+.mail-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); flex: none; }
+.mail-seal { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-title); font-weight: 700; font-size: 19px;
+  border: 2px solid #d9b56a; background: #2c2318; color: #f0d89a; }
+.mail-seal.from-mera { border-color: #6fb3cc; background: #17262a; color: #a9dcf0; }
+.mail-seal.from-kazna { border-color: #b08a4e; background: #2a2014; color: #e8c97e; }
+.mail-seal.big { width: 60px; height: 60px; font-size: 30px; }
+.mail-empty, .mail-note { margin: 6px; font-size: 14px; color: #9c8c6c; }
+.mail-pane { display: flex; flex-direction: column; gap: 14px; padding: 22px 28px; border: 1px solid #8a6a3a; border-radius: 6px; background: rgba(34, 27, 20, 0.85); }
+.mail-pane-head { display: flex; align-items: center; gap: 14px; }
+.mail-pane-who { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: #b3a385; }
+.mail-pane-who b { color: #cdbb98; letter-spacing: 1px; text-transform: uppercase; font-size: 13px; }
+.mail-pane h3 { margin: 0; font-family: var(--font-title); font-size: 32px; color: #f0d89a; }
+.mail-text { margin: 0; flex: 1; font-family: var(--font-title); font-style: italic; font-size: 24px; line-height: 1.45; color: #efe4cc; white-space: pre-line; }
+.mail-rule { margin: 0; padding-top: 12px; border-top: 1px solid rgba(201, 149, 62, 0.35); font-size: 14px; color: #b3a385; }
+.ph-modal .modal.modal-mail .mail-window { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); min-height: 0; }
+.ph-modal .modal.modal-mail .mail-text { font-size: 18px; }
+.modal-mail .mail-note, .modal-mail .mail-empty { font-size: 14px; line-height: 1.4; }
+.modal-mail .mail-rule { font-size: 14px; line-height: 1.4; }
+.modal-mail .mail-text { font-size: 24px; }
+
+/* ---------- почта: таблички письма (27.10) — грани как в Кошельке; Воля синим, бонус цветом дня ---------- */
+.mail-parts { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow-y: auto; max-height: 470px; padding-right: 4px; }
+.mail-card { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; border: 1px solid rgba(201, 149, 62, 0.4); border-radius: 6px; background: rgba(0, 0, 0, 0.28); }
+.mail-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; margin-bottom: 2px; border-bottom: 1px solid rgba(201, 149, 62, 0.25); }
+.mail-card-head .mail-card-title { flex: 1; }
+.mail-card-title { font-size: 14px; letter-spacing: 1px; text-transform: uppercase; color: #b3a385; }
+.mail-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 18px; }
+.mail-line-value { font-variant-numeric: tabular-nums; }
+.mail-line.will .mail-line-value { color: #8fcaff; }
+.mail-line.total { margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(143, 202, 255, 0.3); font-size: 20px; }
+.mail-line.total .mail-line-label { color: #cfe6ff; }
+.mail-line.total .mail-line-value { font-size: 26px; color: #a9d8ff; text-shadow: 0 0 10px rgba(110, 180, 255, 0.35); }
+.mail-line.g-green .mail-line-value { color: #9be08f; }
+.mail-line.g-yellow .mail-line-value { color: #ecc95a; }
+.mail-line.bonus { margin: 2px -8px; padding: 4px 8px; border-radius: 4px; background: rgba(70, 130, 60, 0.18); }
+.mail-line.bonus .mail-line-label { color: #c9ecc0; }
+.mail-line.bonus .mail-line-value { font-size: 22px; }
+/* того, что ещё можно взять, — пунктиром и приглушённо: манит, но не упрекает */
+.mail-line.ghost { margin: 2px -8px; padding: 3px 8px; border: 1px dashed rgba(155, 224, 143, 0.35); border-radius: 4px; opacity: 0.75; }
+.mail-line.ghost.g-yellow { border-color: rgba(236, 201, 90, 0.4); }
+.mail-line.ghost .mail-line-label { color: #b3a385; font-style: italic; }
+.mail-card-note { margin: 4px 0 0; font-family: var(--font-title); font-style: italic; font-size: 20px; color: #efe4cc; }
+/* цвет дня — полоска слева и плашка */
+.mail-day-card { padding-left: 20px; }
+.mail-day-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 6px 0 0 6px; }
+.mail-day-card.g-green::before { background: linear-gradient(180deg, #b6f0a8, #3d8a3a); }
+.mail-day-card.g-yellow::before { background: linear-gradient(180deg, #f6dc86, #a8801e); }
+.mail-day-card.g-red::before { background: linear-gradient(180deg, #f6a890, #9a3e2a); }
+.mail-grade { padding: 2px 10px; border-radius: 10px; border: 1px solid; font-size: 14px; white-space: nowrap; }
+.mail-grade.g-green { color: #b6f0a8; border-color: #3d8a3a; background: rgba(50, 110, 45, 0.25); }
+.mail-grade.g-yellow { color: #f6dc86; border-color: #a8801e; background: rgba(120, 90, 20, 0.25); }
+.mail-grade.g-red { color: #f6a890; border-color: #9a3e2a; background: rgba(120, 45, 30, 0.25); }
+/* новые уровни — цветом силы */
+.mail-lvl { display: flex; align-items: center; gap: 12px; padding: 4px 0 4px 12px; border-left: 3px solid var(--a, #c9953e); }
+.mail-lvl-text { flex: 1; display: flex; flex-direction: column; }
+.mail-lvl-name { font-size: 18px; color: var(--a-text, #f0d89a); }
+.mail-lvl-say { font-family: var(--font-title); font-style: italic; font-size: 17px; color: #cdbb98; }
+.mail-lvl-n { min-width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--a, #c9953e); border-radius: 50%; font-family: var(--font-title); font-size: 24px; color: var(--a-text, #f0d89a); background: rgba(0, 0, 0, 0.3); }
+.a-strength { --a: #a03a16; --a-text: #ffb38a; }
+.a-endurance { --a: #1d7a58; --a-text: #9ff0d0; }
+.a-agility { --a: #6f8a1d; --a-text: #e6f59a; }
+.a-order { --a: #5b3fa8; --a-text: #d6c3ff; }
+.a-calm { --a: #4a5a9a; --a-text: #c9d6ff; }
+.a-morality { --a: #2a5f9e; --a-text: #bfe3ff; }
+.a-will { --a: #3a6a9a; --a-text: #8fcaff; }
+.mail-line.best .mail-line-value { color: var(--a-text, #f0d89a); }
+/* Хранитель меры — свой цвет, как его печать */
+.mail-mera-card { border-color: rgba(111, 179, 204, 0.45); background: rgba(16, 32, 36, 0.45); }
+.mail-mera-card .mail-card-head { justify-content: flex-start; border-bottom-color: rgba(111, 179, 204, 0.25); }
+.mail-mera-card .mail-seal { width: 28px; height: 28px; font-size: 15px; }
+.mail-mera-card .mail-card-title { color: #9cc4d4; }
+.mail-mera-text { margin: 0; font-family: var(--font-title); font-style: italic; font-size: 19px; line-height: 1.4; color: #d9ecf2; }
+.ph-modal .modal.modal-mail .mail-line { font-size: 15px; }
+.ph-modal .modal.modal-mail .mail-card-note, .ph-modal .modal.modal-mail .mail-mera-text { font-size: 16px; }
+/* полоска Воли в письме — ползёт при открытии */
+.mail-bar { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding: 10px 12px; border: 1px solid rgba(143, 202, 255, 0.25); border-radius: 6px; background: rgba(14, 26, 40, 0.45); }
+.mail-bar-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; color: #cfe6ff; }
+.mail-bar-num { font-variant-numeric: tabular-nums; color: #a9d8ff; }
+.mail-bar-track { position: relative; height: 14px; border-radius: 7px; overflow: hidden; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(90, 150, 210, 0.45); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6); }
+.mail-bar-old, .mail-bar-gain { position: absolute; top: 0; bottom: 0; left: 0; }
+.mail-bar-old { background: linear-gradient(180deg, #5b9fe0, #2f5f9a); }
+.mail-bar-gain { background: linear-gradient(180deg, #d4ecff, #7cc0ff); box-shadow: 0 0 12px rgba(140, 200, 255, 0.8); transition: width 1.4s cubic-bezier(0.22, 0.8, 0.3, 1); }
+.mail-bar-left { font-size: 13px; color: #9cb8d4; }
+@media (prefers-reduced-motion: reduce) { .mail-bar-gain { transition: none; } }
+/* «Рост за день» — Интеллект и силы полосками (27.10) */
+.mail-growth-card { gap: 10px; }
+.mail-intel { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid rgba(243, 212, 138, 0.35); border-radius: 6px; background: radial-gradient(120% 140% at 0% 0%, rgba(243, 212, 138, 0.12), rgba(0, 0, 0, 0.25)); }
+.mail-intel-top { display: flex; align-items: baseline; gap: 10px; }
+.mail-intel-name { flex: 1; font-family: var(--font-title); font-size: 22px; color: #f0d89a; letter-spacing: 0.5px; }
+.mail-intel-num { font-family: var(--font-title); font-size: 34px; line-height: 1; color: #ffe3a0; text-shadow: 0 0 14px rgba(255, 210, 120, 0.4); font-variant-numeric: tabular-nums; }
+.mail-intel-plus { padding: 1px 8px; border-radius: 9px; border: 1px solid #a8801e; color: #ffe3a0; background: rgba(120, 90, 20, 0.3); font-size: 15px; }
+.mail-bar-track.intel { height: 8px; border-color: rgba(201, 149, 62, 0.5); }
+.mail-bar-track.intel .mail-bar-old { background: linear-gradient(90deg, #8a6a2a, #e8c272); }
+.mail-grow { display: flex; flex-direction: column; gap: 5px; padding: 6px 0 6px 12px; border-left: 3px solid var(--a, #c9953e); }
+.mail-grow-top { display: flex; align-items: center; gap: 10px; }
+.mail-grow-name { flex: 1; font-size: 18px; color: var(--a-text, #f0d89a); }
+.mail-grow-gain { font-size: 15px; color: var(--a-text, #f0d89a); opacity: 0.85; font-variant-numeric: tabular-nums; }
+.mail-grow .mail-lvl-n { min-width: 34px; height: 34px; font-size: 19px; }
+.mail-bar-track.power { height: 10px; border-color: color-mix(in srgb, var(--a, #c9953e) 80%, transparent); }
+.mail-bar-track.power .mail-bar-old { background: linear-gradient(180deg, color-mix(in srgb, var(--a-text, #f0d89a) 55%, var(--a, #c9953e)), var(--a, #c9953e)); }
+.mail-bar-track.power .mail-bar-gain { background: linear-gradient(180deg, #fff, var(--a-text, #f0d89a)); box-shadow: 0 0 10px color-mix(in srgb, var(--a-text, #f0d89a) 70%, transparent); }
+.mail-grow-foot { font-size: 13px; color: #b3a385; }
+/* новый уровень — кружок светится, подпись цветом силы */
+.mail-grow.up .mail-lvl-n { box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-text) 40%, transparent), 0 0 16px color-mix(in srgb, var(--a-text) 60%, transparent); animation: mail-lvl-pop 0.9s 0.8s ease-out both; }
+.mail-grow.up .mail-grow-foot { font-family: var(--font-title); font-style: italic; font-size: 16px; color: var(--a-text, #f0d89a); }
+@keyframes mail-lvl-pop { 0% { transform: scale(0.6); opacity: 0.3; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .mail-grow.up .mail-lvl-n { animation: none; } }
+.mail-grow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+.mail-grow-name { font-size: 17px; }
+.modal-mail .mail-parts { max-height: min(600px, calc(100vh - 330px)); }
+.ph-modal .modal.modal-mail .mail-grow-grid { grid-template-columns: 1fr; }
+.modal-mail .mail-mera-text { font-size: 19px; }
+.modal-mail .mail-card-note { font-size: 20px; }
+/* сводка дня — тонко: строка на силу */
+.mail-growth-card.compact .mail-grow-grid { gap: 2px 18px; }
+.mail-growth-card.compact .mail-grow { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 2px 10px; padding: 3px 0 3px 10px; }
+.mail-growth-card.compact .mail-grow-top { display: contents; }
+.mail-growth-card.compact .mail-grow-name { grid-column: 1; font-size: 16px; }
+.mail-growth-card.compact .mail-grow-gain { grid-column: 2; font-size: 14px; }
+.mail-growth-card.compact .mail-lvl-n { grid-column: 3; grid-row: 1 / span 2; min-width: 28px; height: 28px; font-size: 16px; }
+.mail-growth-card.compact .mail-bar-track.power { grid-column: 1 / span 2; height: 6px; }
+.mail-growth-card.compact .mail-grow-foot { grid-column: 1 / -1; }
+.mail-growth-card.compact .mail-intel { flex-direction: row; align-items: baseline; padding: 6px 12px; }
+.mail-growth-card.compact .mail-intel-num { font-size: 26px; }
+.mail-growth-card.compact .mail-intel-name { font-size: 19px; }
+.mail-growth-card.compact .mail-grow-grid { align-items: start; }
+.mail-growth-card.compact .mail-grow.up { grid-column: 1 / -1; order: -1; padding: 6px 0 6px 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--a) 22%, transparent), transparent 70%); border-radius: 0 4px 4px 0; }
+/* опыт за день — тонкая строка цветом Кошелька */
+.mail-exp { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 8px 12px; border: 1px solid rgba(201, 149, 62, 0.35); border-radius: 6px; background: rgba(0, 0, 0, 0.22); font-size: 15px; color: #cdbb98; }
+.mail-exp-ic { color: var(--gold); }
+.mail-exp-part { display: inline-flex; gap: 6px; align-items: baseline; }
+.mail-exp-part b { font-variant-numeric: tabular-nums; font-size: 17px; }
+.mail-exp-part b.hand { color: var(--gold); }
+.mail-exp-go { margin-left: auto; appearance: none; background: none; border: 1px solid rgba(201, 149, 62, 0.5); border-radius: 12px; padding: 2px 12px; font: inherit; font-size: 14px; color: var(--gold); cursor: pointer; }
+.mail-exp-go:hover { border-color: var(--gold); background: rgba(201, 149, 62, 0.12); }
+.mail-exp-go:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* кнопки письма «Пора выше» */
+.mail-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 4px; }
+.mail-act { appearance: none; font: inherit; font-size: 15px; padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(111, 179, 204, 0.6); background: rgba(16, 40, 46, 0.6); color: #cfeaf3; cursor: pointer; }
+.mail-act.main { border-color: #ffd27a; background: linear-gradient(180deg, #5a4318, #3a2a10); color: #ffe3a0; font-weight: 700; }
+.mail-act:hover { filter: brightness(1.15); }
+.mail-act:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mail-acts-note { flex-basis: 100%; font-size: 13px; color: #9cb8c4; }
+.mail-acts-done { font-size: 16px; color: #9be08f; }
+/* «показать в заданиях» — строка подсвечивается, «↑ выше» пульсирует */
+.dailies-sets.pulse-step { animation: step-row 3s ease-out; border-radius: 6px; }
+.dailies-sets.pulse-step .dailies-step-btn.up { animation: step-btn 0.8s ease-in-out 3; }
+@keyframes step-row { 0%, 70% { box-shadow: 0 0 0 2px rgba(255, 210, 122, 0.7), 0 0 18px rgba(255, 210, 122, 0.35); background: rgba(255, 210, 122, 0.08); } 100% { box-shadow: none; background: none; } }
+@keyframes step-btn { 50% { transform: scale(1.25); text-shadow: 0 0 10px #ffd27a; } }
+@media (prefers-reduced-motion: reduce) { .dailies-sets.pulse-step, .dailies-sets.pulse-step .dailies-step-btn.up { animation: none; outline: 2px solid #ffd27a; } }
+/* открытия (27.10): под замком в библиотеке и письмо «Мир открыл новое» */
+.dailies-lib-row.shut { opacity: 0.55; cursor: default; flex-wrap: wrap; }
+.dailies-lib-row.shut .dailies-lib-mark { filter: grayscale(1); font-size: 12px; }
+.dailies-lib-hint { flex-basis: 100%; padding-left: 26px; font-size: 11px; font-style: italic; color: #9c8c6c; }
+.mail-open-card { border-color: var(--a, #c9953e); background: radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--a) 28%, transparent), rgba(0, 0, 0, 0.3)); }
+.mail-open-power { font-size: 14px; color: var(--a-text, #f0d89a); }
+.mail-open-name { font-family: var(--font-title); font-size: 30px; color: var(--a-text, #f0d89a); text-shadow: 0 0 14px color-mix(in srgb, var(--a-text) 40%, transparent); animation: mail-lvl-pop 0.9s 0.3s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .mail-open-name { animation: none; } }
+.dailies-lib-row.shut { flex-wrap: nowrap; }
+.dailies-lib-hint { flex-basis: auto; padding-left: 0; margin-left: auto; white-space: nowrap; }
+/* слабости — таблицей (27.10): в полосе итог дня и вход; таблица — на месте заданий, как библиотека */
+.dailies-weak { display: none; min-width: 0; box-sizing: border-box; flex-direction: column; gap: 8px; padding: 8px 12px 10px; }
+.dailies-board.weak-open .dailies-weak { display: flex; }
+.dailies-board.weak-open .dailies-mine, .dailies-board.weak-open .dailies-lib { display: none; }
+.dailies-board.lib-open .dailies-foot, .dailies-board.weak-open .dailies-foot { visibility: hidden; }
+.dailies-weak-hint { margin: 0; font-size: 14px; color: #cdbb98; }
+.dailies-weak-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; align-content: start; }
+.dailies-weak-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid rgba(201, 149, 62, 0.4); border-left: 4px solid #8a5a2a; border-radius: 6px; background: rgba(0, 0, 0, 0.28); }
+.dailies-weak-card.on { border-left-color: #e0806a; background: linear-gradient(90deg, rgba(120, 45, 30, 0.22), rgba(0, 0, 0, 0.28) 60%); }
+.dailies-weak-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.dailies-weak-name { font-family: var(--font-title); font-size: 21px; color: #f0d89a; }
+.dailies-weak-paid { font-size: 17px; color: #f0b08f; font-variant-numeric: tabular-nums; }
+.dailies-weak-note { font-size: 13px; color: #b3a385; }
+.dailies-weak-tiers { display: flex; flex-wrap: wrap; gap: 6px; }
+.dailies-weak-tier { appearance: none; font: inherit; cursor: pointer; display: inline-flex; gap: 8px; align-items: baseline; padding: 4px 10px; font-size: 15px; color: #e8dcc2;
+  border: 1px solid rgba(201, 149, 62, 0.5); border-radius: 4px; background: rgba(40, 26, 10, 0.6); }
+.dailies-weak-tier b { color: #f0b08f; font-variant-numeric: tabular-nums; }
+.dailies-weak-tier:hover:not(:disabled) { border-color: #f0b08f; background: rgba(120, 45, 30, 0.3); }
+.dailies-weak-tier.on { border-color: #f0b08f; background: rgba(140, 50, 30, 0.55); color: #fff1e6; box-shadow: 0 0 10px rgba(240, 140, 110, 0.35); }
+.dailies-weak-tier:disabled { opacity: 0.4; cursor: not-allowed; }
+.dailies-weak-tier:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.dailies-weak-fact { margin: 0; font-size: 12px; font-style: italic; line-height: 1.35; color: #a89878; }
+.dailies-weak-sum { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; flex: 1; align-items: center; }
+.dailies-weak-chip { font-size: 15px; padding: 2px 10px; border-radius: 10px; color: #f0b08f; border: 1px solid rgba(240, 176, 143, 0.5); background: rgba(80, 30, 20, 0.4); white-space: nowrap; }
+.dailies-weak-clean { font-size: 15px; color: #9be08f; }
+.dailies-weak-btn { font-size: 18px; padding: 4px 14px; }
+.modal-quests .in-quests .dailies-weak { max-height: 404px; height: 404px; overflow-y: auto; }
+.modal-quests .in-quests .dailies-weak-sum { flex-wrap: nowrap; overflow: hidden; }
+.ph-sheet .dailies-weak-grid { grid-template-columns: 1fr; }
+.modal-quests .in-quests .dailies-weak-fact { font-size: 13px; line-height: 1.35; }
+.modal-quests .in-quests .dailies-weak-hint { font-size: 14px; }
+.modal-quests .in-quests .dailies-weak-name { font-size: 20px; }

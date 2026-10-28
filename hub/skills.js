@@ -152,6 +152,18 @@ export function balanceOf(lib, mastery) {
   return { val, total, newcomer, status, point: { x: px, y: py }, offset, balanced };
 }
 
+/** Интеллект = уровни всех сил + мастерство навыков; в равновесии навыков — бонус. Для письма и окна навыков. */
+export function intellectOf(lib, mastery, flasks) {
+  const might = Object.values(flasks ?? {}).reduce((sum, f) => sum + (f.level ?? 0), 0);
+  if (!lib?.blocks) return { value: might, might, skills: 0, balanced: false };
+  const bal = balanceOf(lib, mastery ?? {});
+  const skills = Object.values(bal.val).reduce((a, b) => a + b, 0);
+  const base = might + skills;
+  return { value: bal.balanced ? Math.round(base * (1 + lib.rules.balanceBonus)) : base, might, skills, balanced: bal.balanced };
+}
+
+export const masteryNow = () => loadMastery();
+
 export function initSkills(ctx, getDailies) {
   const lib = ctx.skills;
   const t = ctx.texts.skills;
@@ -353,10 +365,15 @@ export function initSkills(ctx, getDailies) {
         svg.append(sv("circle", { cx: nx, cy: ny, r: 7, class: "sk-node" }));
       }
     }
-    // форма игрока: самое сильное направление — на 85 % радиуса (шкала растёт вместе с игроком), минимум 20
-    const top = Math.max(20, Math.max(...Object.values(bal.val)) / 0.85);
+    // форма игрока (22.10, как в «Силах»): «зерно» — малый шестиугольник, направления растут от него наружу;
+    // самое сильное — до 85 % радиуса (шкала растёт вместе с игроком, минимум 20). Без зерна при одном направлении
+    // форма схлопывалась в черту.
+    const SEED = 0.32;
+    const top = Math.max(20, Math.max(...Object.values(bal.val)));
+    const reach = (b) => R * (SEED + ((0.85 - SEED) * bal.val[b.key]) / top);
     if (bal.total > 0) {
-      const pts = lib.blocks.map((b) => P(b.angle, (R * bal.val[b.key]) / top));
+      svg.append(sv("polygon", { points: angs.map((a) => P(a, R * SEED).join(",")).join(" "), class: "sk-seed" }));
+      const pts = lib.blocks.map((b) => P(b.angle, reach(b)));
       svg.append(sv("polygon", { points: pts.map((p) => p.join(",")).join(" "), class: "sk-shape" }));
       for (const [x, y] of pts) svg.append(sv("circle", { cx: x, cy: y, r: 4, class: "sk-vert" }));
     }
@@ -370,7 +387,7 @@ export function initSkills(ctx, getDailies) {
     // точка — центр тяжести самой формы: всегда внутри неё и тянется к перекосу
     let px = 0;
     let py = 0;
-    if (bal.total > 0) [px, py] = centroidOf(lib.blocks.map((b) => P(b.angle, (R * bal.val[b.key]) / top)));
+    if (bal.total > 0) [px, py] = centroidOf(lib.blocks.map((b) => P(b.angle, reach(b))));
     if (!bal.balanced && bal.total > 0) svg.append(sv("line", { x1: 0, y1: 0, x2: px, y2: py, class: "sk-pull" }));
     const dot = sv("g", { class: `sk-dot${bal.balanced || bal.total === 0 ? " calm" : ""}` });
     dot.append(sv("circle", { cx: px, cy: py, r: 22, class: "sk-dot-glow" }), sv("circle", { cx: px, cy: py, r: 11, class: "sk-dot-core" }));

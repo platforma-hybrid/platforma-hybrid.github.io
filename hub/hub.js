@@ -6,11 +6,27 @@ import { createKolo, gradeDay, monthStats } from "./kolo.js";
 import { initQuests } from "./quests.js";
 import { initAchievements } from "./achievements.js";
 import { initStats, powersBalance } from "./stats.js";
-import { initSkills } from "./skills.js";
+import { initSkills, intellectOf, masteryNow } from "./skills.js";
 import { initPhone } from "./phone.js";
 import { addPoints, convertFlask, fractionalLevel, levelNeed, migrateFlask } from "./levels.js";
+import { dayNum as dayNumOf, stepDown, stepStatus, stepUp } from "./steps.js";
+import { initWallet } from "./wallet.js";
+import { fill as fillMail, initMail, periodSummaries, postMail } from "./mail.js";
 
 const params = new URLSearchParams(window.location.search);
+// Админ-режим (автор, 27.10): на компьютере автора (localhost) включён всегда; на сайте — один раз открыть с ?admin=1,
+// дальше браузер помнит. ?admin=0 — выключить (запоминается так же).
+const LOCAL = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+const ADMIN = (() => {
+  const q = params.get("admin");
+  try {
+    if (q === "1" || q === "0") window.localStorage.setItem("gibrid.admin.on", q);
+    const saved = window.localStorage.getItem("gibrid.admin.on");
+    return saved === "1" || (LOCAL && saved !== "0");
+  } catch {
+    return q === "1" || (LOCAL && q !== "0");
+  }
+})();
 const ICONS = "/assets/hub/icons/";
 
 async function loadJson(url) {
@@ -191,12 +207,9 @@ const components = {
     box.append(badge);
   },
 
-  mail(box, { texts, character }) {
-    const button = actionButton("mail-button", "modal:mail", texts.mailLabel);
-    button.append(icon("mail"));
-    const unread = character.mail?.unread ?? 0;
-    if (unread > 0) button.append(el("span", "mail-badge", String(unread)));
-    box.append(button);
+  // Почта (27.10, SPEC_MAIL.md): письма Мира и хранителей, число новых на кнопке
+  mail(box, ctx) {
+    initMail(box, ctx, icon, () => lastDailies);
   },
 
   // Меню: кольцо Воли + золотая рейка с пунктами (04.10.2026).
@@ -341,6 +354,11 @@ const components = {
     createDailies(box, ctx);
   },
 
+  // Кошелёк (27.10, SPEC_WALLET.md): «◈ В руке · ⧗ В закромах» в углу, нажатие — окно с Казной
+  wallet(box, ctx) {
+    initWallet(box, ctx, () => lastDailies);
+  },
+
   statusPlank(box, { texts, character }) {
     const plank = actionButton("wood plank status-plank", "modal:status");
     plank.append(el("span", "status-label", texts.statusLabel), el("span", "status-value", character.status));
@@ -437,7 +455,7 @@ function freshFlasks(data) {
 }
 
 function loadDailiesState(data) {
-  const fresh = { day: todayKey(), wallet: data.start.wallet, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3 };
+  const fresh = { day: todayKey(), wallet: data.start.wallet, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3, stepsV: 2, picked: defaultPicks(data, []), open: [...(data.open?.start ?? [])] };
   let saved = null;
   try {
     saved = JSON.parse(window.localStorage.getItem(DAILIES_KEY) ?? "null");
@@ -452,8 +470,27 @@ function loadDailiesState(data) {
   saved.closed ??= false;
   saved.history ??= [];
   saved.willTasks ??= {};
+  saved.sets ??= {};
+  saved.steps ??= {};
+  saved.dayGains ??= {};
+  saved.dayFlasks ??= {};
+  saved.setGains ??= {};
+  // 26.10: «мои задания дня» — старым сохранениям: задания по умолчанию + то, что уже отмечено сегодня
+  saved.picked ??= defaultPicks(data, saved.done);
+  // 27.10: открытия — старым сохранениям ничего не закрываем: открыто всё, что уже выбирал или делал
+  if (!saved.open) {
+    const had = new Set([...(data.open?.start ?? []), ...saved.picked, ...saved.done, ...saved.history.flatMap((h) => h.ids ?? [])]);
+    saved.open = [...had];
+  }
+  // 27.10: новые лестницы отжиманий и приседаний — переносим ступень на ту же по смыслу
+  if (saved.stepsV !== 2) {
+    const map = { pushups: [0, 2, 4, 4, 5], squats: [1, 2, 3, 4] };
+    for (const [id, to] of Object.entries(map)) if (saved.steps[id]) saved.steps[id].step = to[saved.steps[id].step] ?? saved.steps[id].step;
+    saved.stepsV = 2;
+  }
   // 24.10: ровная шкала (каждый уровень = flaskMax очков) → лестница уровней; накопленные очки сохраняются
-  if (saved.curveV !== 2) {
+  // 28.10: только старые сохранения без лестницы (curveV < 2) — иначе каждая перезагрузка пересчитывала колбы заново и уровни росли сами
+  if ((saved.curveV ?? 1) < 2) {
     for (const key of Object.keys(saved.flasks)) saved.flasks[key] = migrateFlask(data.levelCurve, saved.flasks[key], data.flaskMax);
     saved.curveV = 2;
   }
@@ -478,7 +515,7 @@ function rollDay(state, data) {
     const attr = taskAttr(data, id);
     if (attr) attrs[attr] = (attrs[attr] ?? 0) + 1;
   }
-  state.history.push({ day: state.day, done: state.done.length, ids: [...state.done], attrs, spent: state.bought.reduce((sum, b) => sum + b.price, 0), closedBy: state.closed ? "player" : "midnight", ...(state.willBonus ? { willBonus: state.willBonus } : {}) });
+  state.history.push({ day: state.day, done: state.done.length, ids: [...state.done], attrs, spent: state.bought.reduce((sum, b) => sum + b.price, 0), closedBy: state.closed ? "player" : "midnight", ...(state.willBonus ? { willBonus: state.willBonus } : {}), ...(state.sets && Object.keys(state.sets).length ? { sets: { ...state.sets } } : {}), gains: { ...(state.dayGains ?? {}) }, bought: state.bought.map((b) => ({ name: b.name, price: b.price })) });
   state.history = state.history.slice(-400);
   state.day = todayKey();
   state.done = [];
@@ -486,12 +523,25 @@ function rollDay(state, data) {
   state.closed = false;
   state.willBonus = 0;
   state.willTasks = {};
+  state.sets = {};
+  state.setGains = {};
+  state.dayGains = {};
+  state.dayFlasks = {};
   return true;
 }
 
 function taskAttr(data, id) {
   for (const group of data.groups) for (const task of group.tasks) if (task.id === id) return task.attr;
+  for (const task of data.retired ?? []) if (task.id === id) return task.attr; // снятые задания — для старой истории
   return null;
+}
+
+// «мои задания дня» по умолчанию (26.10): из dailies.json → pick.default, плюс уже отмеченные сегодня; не больше max
+function defaultPicks(data, done) {
+  const ids = new Set(data.groups.flatMap((g) => g.tasks).map((task) => task.id));
+  const out = [...(data.pick?.default ?? [])].filter((id) => ids.has(id));
+  for (const id of done ?? []) if (ids.has(id) && !out.includes(id)) out.push(id);
+  return out.slice(0, data.pick?.max ?? 10);
 }
 
 function saveDailiesState(state) {
@@ -552,82 +602,439 @@ function createDailies(box, ctx) {
   const walletValue = el("b", "");
   const wallet = el("div", "dailies-wallet");
   wallet.append(el("span", "", `${t.wallet}: `), walletValue);
-  top.append(wallet, el("p", "dailies-hint", t.hint));
+  const libBtn = el("button", "dailies-lib-btn");
+  libBtn.type = "button";
+  libBtn.setAttribute("aria-expanded", "false");
+  top.append(wallet, el("p", "dailies-hint", t.hint), libBtn);
 
-  // зелёные задания: графы 2×2
-  const cols = el("div", "dailies-cols");
-  let total = 0;
-  const taskRows = [];
-  const activeTasks = [];
-  for (const group of data.groups) {
-    const col = el("div", "dailies-col");
-    col.append(el("h3", "", group.title));
-    for (const task of group.tasks) {
-      const row = el("label", "dailies-task");
-      const check = el("input");
-      check.type = "checkbox";
-      row.append(check, el("span", "dailies-task-name", task.name));
-      if (task.attr) row.append(el("span", `dailies-tag tag-${task.attr}`, t.attrShort[task.attr]));
-      if (task.attr === "dev") {
-        // атрибут в разработке: без награды, отметить нельзя
-        row.classList.add("dev");
-        check.disabled = true;
-        col.append(row);
-        continue;
-      }
-      total += 1;
-      activeTasks.push({ id: task.id, attr: task.attr });
-      row.append(el("span", "dailies-pts", `+${reward}`));
-      check.addEventListener("change", () => {
-        if (state.closed) return render();
-        const sign = check.checked ? 1 : -1;
-        state.wallet = Math.max(0, state.wallet + reward * sign);
-        state.earned = Math.max(0, (state.earned ?? 0) + reward * sign);
-        if (check.checked) state.done.push(task.id);
-        else state.done = state.done.filter((id) => id !== task.id);
-        // Воля — двигатель (24.10): за само дело понемногу, за отстающую силу пары — чуть больше
-        if (check.checked) {
-          const gain = W.perTask + (lagging(task.attr) ? W.lagging : 0);
-          state.willTasks[task.id] = gain;
-          addFlask("will", gain);
-        } else {
-          addFlask("will", -(state.willTasks[task.id] ?? W.perTask));
-          delete state.willTasks[task.id];
-        }
-        if (data.flasks.includes(task.attr)) addFlask(task.attr, reward * sign);
-        commit();
-      });
-      taskRows.push({ task, row, check });
-      col.append(row);
+  // «мои задания дня» (26.10): человек выбирает 6–10 дел из библиотеки; справа — сама библиотека по силам
+  const cols = el("div", "dailies-cols with-lib");
+  const mine = el("div", "dailies-mine");
+  const lib = el("div", "dailies-lib");
+  cols.append(mine, lib);
+  const L = t.library ?? {};
+  const pick = { min: data.pick?.min ?? 6, max: data.pick?.max ?? 10 };
+  const allTasks = data.groups.flatMap((g) => g.tasks).filter((task) => task.attr && task.attr !== "dev");
+  const byId = Object.fromEntries(allTasks.map((task) => [task.id, task]));
+  // открытия (27.10, SPEC_PROGRAMS §10): старт с малого, следующее дело дорожки мир открывает сам
+  const O = data.open ?? null;
+  state.open ??= O ? [...O.start] : allTasks.map((x) => x.id);
+  const isOpen = (id) => !O || state.open.includes(id);
+  const openIds = () => allTasks.map((x) => x.id).filter(isOpen);
+  const openPrev = (id) => {
+    for (const ids of Object.values(O?.order ?? {})) {
+      const i = ids.indexOf(id);
+      if (i > 0) return ids[i - 1];
     }
-    col.append(el("div", "dailies-add", t.addOwn));
-    cols.append(col);
+    return null;
+  };
+  // какой уровень силы нужен, чтобы открылось дело: 2-е в дорожке — levels[0], 3-е — levels[1]…
+  const needLevel = (id) => {
+    for (const ids of Object.values(O?.order ?? {})) {
+      const i = ids.indexOf(id);
+      if (i > 0) return (O.levels ?? [])[i - 1] ?? Infinity;
+    }
+    return Infinity;
+  };
+  // открывается (27.10, автор: «было 5 силы — стало 10 — вот и новое упражнение»): сила дорожки доросла до уровня
+  function checkOpen() {
+    if (!O) return false;
+    let any = false;
+    for (const ids of Object.values(O.order ?? {})) {
+      const next = ids.find((id) => !state.open.includes(id));
+      if (!next || !byId[next] || !openPrev(next)) continue;
+      const attr = byId[next].attr;
+      if ((state.flasks[attr]?.level ?? 0) < needLevel(next)) continue;
+      state.open = [...state.open, next];
+      if (!state.picked.includes(next) && state.picked.length < (data.pick?.max ?? 10)) state.picked = [...state.picked, next];
+      const M = ctx.texts.mail ?? {};
+      const task = byId[next];
+      const power = t.attrs[task.attr] ?? task.attr;
+      const lvl = needLevel(next);
+      const say = fillMail(M.openText, { name: task.name, power, lvl });
+      postMail({ key: `open-${next}`, from: "mir", title: fillMail(M.openTitle, { name: task.name }), text: say, parts: [{ t: "open", attr: task.attr, name: task.name, power, text: say }] });
+      any = true;
+    }
+    return any;
+  }
+  let total = 0;
+  let taskRows = [];
+  let activeTasks = [];
+
+  // Воля (25.10): +1 за дело один раз, за отстающую силу пары — ещё +1
+  function willOn(task) {
+    const gain = W.perTask + (lagging(task.attr) ? W.lagging : 0);
+    state.willTasks[task.id] = gain;
+    addFlask("will", gain);
+  }
+  function willOff(task) {
+    addFlask("will", -(state.willTasks[task.id] ?? W.perTask));
+    delete state.willTasks[task.id];
+  }
+  function earn(task, amount) {
+    // приход по делам за сегодня — для истории Казны (кошелёк, 27.10)
+    const g = (state.dayGains?.[task.id] ?? 0) + amount;
+    state.dayGains = { ...(state.dayGains ?? {}), [task.id]: g };
+    if (g <= 0) delete state.dayGains[task.id];
+    state.wallet = Math.max(0, state.wallet + amount);
+    state.earned = Math.max(0, (state.earned ?? 0) + amount);
+    if (data.flasks.includes(task.attr)) addFlask(task.attr, amount);
+  }
+  // подходы «+N» (26.10, SPEC_PROGRAMS §2): 1-й подход — полная награда, дальше 60/40/25/15 %, на 5-м — потолок дня
+  const SETS = data.sets ?? { share: [1, 0.6, 0.4, 0.25, 0.15], levels: { light: 1, medium: 3, hard: 5 } };
+  const setGain = (i) => Math.max(1, Math.round(reward * (SETS.share[i] ?? 0)));
+  const setsMax = SETS.share.length;
+
+  function makeRow(task) {
+    if (task.kind === "rep" || task.kind === "time") return makeSetsRow(task);
+    const row = el("label", "dailies-task");
+    const check = el("input");
+    check.type = "checkbox";
+    row.append(check, el("span", "dailies-task-name", task.name));
+    row.append(el("span", `dailies-tag tag-${task.attr}`, t.attrShort[task.attr]));
+    row.append(el("span", "dailies-pts", `+${reward}`));
+    if (task.check) row.title = `Чем проверить: ${task.check}`;
+    check.addEventListener("change", () => {
+      if (state.closed) return render();
+      const sign = check.checked ? 1 : -1;
+      earn(task, reward * sign);
+      if (check.checked) state.done.push(task.id);
+      else state.done = state.done.filter((id) => id !== task.id);
+      if (check.checked) willOn(task);
+      else willOff(task);
+      commit();
+    });
+    const update = () => {
+      check.checked = state.done.includes(task.id);
+      check.disabled = state.closed;
+      row.classList.toggle("done", check.checked);
+    };
+    taskRows.push({ task, row, update });
+    return row;
   }
 
-  // жёлтые траты + «куплено сегодня» с отменой
+  // ступени (27.10, hub/steps.js): у задания с подходами — лестница движений; запись ступени — state.steps[id]
+  state.steps ??= {};
+  state.setGains ??= {};
+  const stepEntry = (task) => (state.steps[task.id] ??= { step: task.step ?? 0, since: state.day });
+  const stepInfo = (task) => {
+    const entry = stepEntry(task);
+    const ladder = task.steps ?? [];
+    const cur = ladder[entry.step] ?? { name: task.name, n: task.n };
+    const status = ladder.length
+      ? stepStatus(data.stepRule, task.id, entry, state.history, state.day, { setsMax, last: ladder.length - 1, restricted: data.stepRule?.restricted })
+      : { offer: false, auto: false, mult: 1, canReturn: false };
+    return { entry, cur, status };
+  };
+  // мир поднимает сам: 5 недель с делом или 12 «сложных» дней из 14 (письмом — когда будет почта; пока — всплывашкой)
+  const raisedNow = [];
+  for (const task of allTasks) {
+    if (!task.steps?.length || !state.picked.includes(task.id)) continue;
+    const { entry, cur, status } = stepInfo(task);
+    const M = ctx.texts.mail ?? {};
+    if (status.auto && !(state.sets?.[task.id] > 0)) {
+      state.steps[task.id] = stepUp(entry, state.day);
+      const name = task.steps[state.steps[task.id].step]?.name ?? task.name;
+      raisedNow.push(name);
+      postMail({ key: `step-${task.id}-${state.steps[task.id].step}-raised`, from: "mera", title: M.raisedTitle, text: fillMail(M.raisedText, { name }), parts: [{ t: "mera", kind: "raised", text: fillMail(M.raisedText, { name }) }] });
+    } else if (status.offer) {
+      // письмо Хранителя меры «пора выше» — один раз на ступень
+      const next = task.steps[(entry.step ?? 0) + 1]?.name ?? "";
+      postMail({ key: `step-${task.id}-${entry.step}-${entry.since}-offer`, from: "mera", title: M.stepTitle, text: fillMail(M.stepText, { name: cur.name, next }), parts: [{ t: "mera", kind: "step", text: fillMail(M.stepShort, { name: cur.name, next }), task: task.id, step: entry.step ?? 0, name: cur.name, next }] });
+    }
+  }
+
+  // при входе: мир мог открыть новое, пока человека не было
+  if (checkOpen()) saveDailiesState(state);
+
+  function makeSetsRow(task) {
+    const S = t.sets ?? {};
+    const ui = data.setsUi ?? "roman"; // «roman» — подходы табличками I II III IV V (автор, 27.10); «dots» — кружки; «button» — кнопка «+20»
+    const row = el("div", `dailies-task dailies-sets ui-${ui}`);
+    row.dataset.task = task.id;
+    const name = el("span", "dailies-task-name");
+    const title = el("span", "");
+    const info = el("span", "dailies-sets-info");
+    const stepUpBtn = el("button", "dailies-step-btn up", S.up ?? "");
+    stepUpBtn.type = "button";
+    const stepDownBtn = el("button", "dailies-step-btn down", S.down ?? "");
+    stepDownBtn.type = "button";
+    const steps = el("span", "dailies-step-acts");
+    steps.append(stepUpBtn, stepDownBtn);
+    name.append(title, info, steps);
+    const dots = el("span", "dailies-dots");
+    dots.setAttribute("aria-hidden", "true");
+    const dotNodes = [];
+    for (let i = 0; i < setsMax; i++) {
+      const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
+      const dot = el(ui === "dots" || ui === "roman" ? "button" : "span", `dailies-dot${Object.values(SETS.levels).includes(i + 1) ? " big" : ""}`, ui === "roman" ? ROMAN[i] : undefined);
+      if (ui === "dots" || ui === "roman") {
+        dot.type = "button";
+        dot.addEventListener("click", () => (i === count() ? plus.click() : i === count() - 1 ? undo.click() : null));
+      }
+      dotNodes.push(dot);
+      dots.append(dot);
+    }
+    const undo = el("button", "dailies-undo-set", "↶");
+    undo.type = "button";
+    undo.setAttribute("aria-label", S.undo ?? "");
+    const plus = el("button", "dailies-plus");
+    plus.type = "button";
+    const pts = el("span", "dailies-pts");
+    // сила видна по графе — у строк с подходами метки нет, чтобы название влезало в одну строку (27.10)
+    row.append(name, dots, undo, plus, pts);
+    if (task.check) row.title = `Чем проверить: ${task.check}`;
+    const count = () => state.sets?.[task.id] ?? 0;
+    // награда за подход: убывает по подходам и тает, когда тело привыкло к ступени (mult)
+    const gainNow = (c) => Math.max(1, Math.round(reward * (SETS.share[c] ?? 0) * stepInfo(task).status.mult));
+    plus.addEventListener("click", () => {
+      const c = count();
+      if (state.closed || c >= setsMax) return;
+      const gain = gainNow(c);
+      state.sets = { ...(state.sets ?? {}), [task.id]: c + 1 };
+      state.setGains[task.id] = [...(state.setGains[task.id] ?? []), gain];
+      earn(task, gain);
+      if (c === 0) {
+        state.done.push(task.id);
+        willOn(task);
+      } else {
+        // Воля за подходы (автор, 27.10): +1 за каждый следующий подход, а закрыл все — ещё бонус
+        const w = (W.perSet ?? 1) + (c + 1 >= setsMax ? W.hardBonus ?? 2 : 0);
+        state.willTasks[task.id] = (state.willTasks[task.id] ?? 0) + w;
+        addFlask("will", w);
+      }
+      commit();
+    });
+    undo.addEventListener("click", () => {
+      const c = count();
+      if (state.closed || c <= 0) return;
+      const gains = [...(state.setGains[task.id] ?? [])];
+      const back = gains.pop() ?? gainNow(c - 1);
+      state.setGains[task.id] = gains;
+      state.sets = { ...(state.sets ?? {}), [task.id]: c - 1 };
+      earn(task, -back);
+      if (c === 1) {
+        state.done = state.done.filter((id) => id !== task.id);
+        willOff(task);
+      } else {
+        const w = (W.perSet ?? 1) + (c >= setsMax ? W.hardBonus ?? 2 : 0);
+        state.willTasks[task.id] = Math.max(0, (state.willTasks[task.id] ?? 0) - w);
+        addFlask("will", -w);
+      }
+      commit();
+    });
+    stepUpBtn.addEventListener("click", () => {
+      if (state.closed) return;
+      state.steps[task.id] = stepUp(stepEntry(task), state.day);
+      toast(fill(S.raised, { name: stepInfo(task).cur.name }));
+      commit();
+    });
+    stepDownBtn.addEventListener("click", () => {
+      if (state.closed) return;
+      state.steps[task.id] = stepDown(stepEntry(task), state.day, data.stepRule);
+      toast(fill(S.lowered, { name: stepInfo(task).cur.name }));
+      commit();
+    });
+    const update = () => {
+      const c = count();
+      const { cur, status } = stepInfo(task);
+      title.textContent = ui !== "button" ? `${cur.name} · ${S.per ?? "по"} ${cur.n}${task.time ? ` ${S.min ?? "мин"}` : ""}` : cur.name;
+      plus.textContent = task.time ? `+${cur.n} ${S.min ?? "мин"}` : `+${cur.n}`;
+      plus.setAttribute("aria-label", `${cur.name}: ${S.add ?? ""}`);
+      dotNodes.forEach((d, i) => {
+        d.classList.toggle("on", i < c);
+        d.classList.toggle("next", i === c && !state.closed);
+        if (ui !== "button") {
+          d.disabled = state.closed || (i !== c && i !== c - 1);
+          d.setAttribute("aria-label", i === c ? `${cur.name}: ${S.add ?? ""} ${i + 1}` : i === c - 1 ? S.undo ?? "" : `${i + 1}`);
+        }
+      });
+      const level = c >= SETS.levels.hard ? S.hard : c >= SETS.levels.medium ? S.medium : c >= SETS.levels.light ? S.light : "";
+      const parts = [];
+      if (c) parts.push(`${level} ✓ · ${c * cur.n} ${S.of ?? "из"} ${setsMax * cur.n} ${task.unit ?? ""}`);
+      if (status.mult < 1) parts.push(fill(S.tired, { p: Math.round(status.mult * 100) }));
+      info.textContent = parts.join(" · ");
+      stepUpBtn.hidden = !status.offer || state.closed;
+      stepDownBtn.hidden = !status.canReturn || state.closed;
+      plus.disabled = state.closed || c >= setsMax;
+      undo.disabled = state.closed || c <= 0;
+      undo.hidden = c <= 0;
+      pts.textContent = c >= setsMax ? S.cap ?? "" : `+${gainNow(c)}`;
+      row.classList.toggle("done", c > 0);
+      row.classList.toggle("capped", c >= setsMax);
+    };
+    taskRows.push({ task, row, update });
+    return row;
+  }
+
+  function togglePick(id) {
+    if (state.closed || state.done.includes(id)) return;
+    if (state.picked.includes(id)) state.picked = state.picked.filter((p) => p !== id);
+    else if (state.picked.length < pick.max) state.picked = [...state.picked, id];
+    else return toast(fill(L.full, { max: pick.max }));
+    buildTasks();
+    commit();
+  }
+
+  function buildTasks() {
+    taskRows = [];
+    activeTasks = [];
+    mine.replaceChildren();
+    const picked = state.picked.filter((id) => byId[id]);
+    total = picked.length;
+    for (const group of data.groups) {
+      const tasks = group.tasks.filter((task) => picked.includes(task.id));
+      if (!tasks.length) continue;
+      const col = el("div", "dailies-col");
+      col.append(el("h3", "", group.title));
+      for (const task of tasks) {
+        activeTasks.push({ id: task.id, attr: task.attr });
+        col.append(makeRow(task));
+      }
+      mine.append(col);
+    }
+    if (!total) mine.append(el("p", "dailies-empty", L.none ?? ""));
+    buildLib();
+  }
+
+  // библиотека: все задания по силам, нажатие — взять или убрать (перерисовывается при каждой отметке: замки «сделано»)
+  function buildLib() {
+    const picked = state.picked.filter((id) => byId[id]);
+    lib.replaceChildren();
+    const head = el("div", "dailies-lib-head");
+    head.append(el("h3", "", L.title ?? ""), el("span", "dailies-lib-count", fill(L.picked, { n: total, max: pick.max })));
+    const emptyPower = data.groups.find((g) => !g.tasks.some((task) => picked.includes(task.id)));
+    const keeper = el("p", "dailies-keeper");
+    keeper.append(el("b", "", `${L.keeper ?? ""}: `), document.createTextNode(emptyPower ? fill(L.empty, { power: emptyPower.title }) : L.ok ?? ""));
+    lib.append(head, keeper);
+    if (state.closed) lib.append(el("p", "dailies-lib-warn", L.closed ?? ""));
+    else if (total < Math.min(pick.min, openIds().length)) lib.append(el("p", "dailies-lib-warn", fill(L.tooFew, { min: Math.min(pick.min, openIds().length) })));
+    else if (total >= pick.max) lib.append(el("p", "dailies-lib-warn", fill(L.full, { max: pick.max })));
+    const grid = el("div", "dailies-lib-groups");
+    lib.append(grid);
+    // графы по силам — как в окне заданий (автор, 27.10); программы «в разработке» видны, но взять их пока нельзя
+    for (const group of data.groups) {
+      const box = el("div", "dailies-col dailies-lib-col");
+      box.append(el("h3", "", group.title));
+      for (const task of group.tasks) {
+        const dev = task.attr === "dev";
+        const shut = !dev && !isOpen(task.id);
+        const on = !dev && !shut && picked.includes(task.id);
+        const locked = on && state.done.includes(task.id);
+        const row = el("button", `dailies-task dailies-lib-row${on ? " on" : ""}${dev ? " dev" : ""}${shut ? " shut" : ""}`);
+        row.type = "button";
+        row.append(el("span", "dailies-lib-mark", dev ? "·" : shut ? "🔒" : on ? "✓" : "+"), el("span", "dailies-task-name", shut ? L.mystery ?? "???" : task.name));
+        if (shut) {
+          // «одна тайна впереди» (автор, 27.10): видно только следующее дело — без названия; дальше — ничего
+          const track = Object.values(O?.order ?? {}).find((ids) => ids.includes(task.id));
+          if (!track || track.find((id) => !isOpen(id)) !== task.id) continue;
+          const lvl = needLevel(task.id);
+          const power = t.attrs[task.attr] ?? task.attr;
+          row.append(el("span", "dailies-lib-hint", Number.isFinite(lvl) ? fill(L.lockHint, { power, lvl }) : L.lockSoon ?? ""));
+          if (Number.isFinite(lvl)) row.title = fill(L.lockTitle, { power, lvl, now: state.flasks[task.attr]?.level ?? 0 });
+          row.disabled = true;
+          box.append(row);
+          continue;
+        }
+        if (dev) row.append(el("span", "dailies-tag tag-dev", t.attrShort.dev ?? "")); // сила видна по графе — метка только у «в разработке»
+        row.setAttribute("aria-pressed", on ? "true" : "false");
+        row.disabled = dev || state.closed || locked || (!on && total >= pick.max);
+        if (locked) row.title = L.locked ?? "";
+        else if (!dev && task.check) row.title = `Чем проверить: ${task.check}`;
+        if (!dev) row.addEventListener("click", () => togglePick(task.id));
+        box.append(row);
+      }
+      grid.append(box);
+    }
+  }
+  // библиотека — отдельным входом (автор, 27.10): окно заданий как было, кнопка открывает библиотеку на его месте
+  const setLib = (open) => {
+    if (open && board.classList.contains("weak-open")) setWeak(false);
+    board.classList.toggle("lib-open", open);
+    libBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    libBtn.textContent = open ? L.close ?? "" : L.open ?? "";
+  };
+  libBtn.addEventListener("click", () => setLib(!board.classList.contains("lib-open")));
+  setLib(false);
+  const fill = (tpl, v) => String(tpl ?? "").replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
+  buildTasks();
+  if (raisedNow.length) window.setTimeout(() => toast(fill(t.sets?.raisedAuto, { name: raisedNow.join(", ") })), 1200);
+
+  // слабости (27.10, автор: «в красивую табличку, как и всё»): в полосе — итог дня и вход; таблица — на месте заданий, как библиотека.
+  // Табак и алкоголь — по количеству; одна ступень на слабость в день: другая — доплата/возврат разницы, та же — отмена.
+  const WK = t.weak ?? {};
+  const buyList = (data.buys ?? []).map((b) => ({ ...b, tiers: b.tiers ?? [{ id: "1", label: "", price: b.price }] }));
   const yellow = el("div", "dailies-yellow");
   const yellowHead = el("h3", "");
   yellowHead.append(el("span", "", t.yellowTitle), el("small", "", t.yellowHint));
-  const buys = el("div", "dailies-buys");
-  const buyButtons = [];
-  for (const item of data.buys) {
-    const button = el("button", "dailies-buy");
-    button.type = "button";
-    button.dataset.price = String(item.price);
-    button.append(el("span", "", item.name), el("b", "", `−${item.price}`));
-    button.addEventListener("click", () => {
-      if (state.closed) return;
-      if (state.wallet < item.price) return toast(t.notEnough);
-      state.wallet -= item.price;
-      state.bought.push({ id: item.id, name: item.name, price: item.price });
-      toast(`${t.bought} ${item.name}`);
-      commit();
-    });
-    buyButtons.push(button);
-    buys.append(button);
+  const weakSum = el("div", "dailies-weak-sum");
+  const weakBtn = el("button", "dailies-lib-btn dailies-weak-btn");
+  weakBtn.type = "button";
+  yellow.append(yellowHead, weakSum, weakBtn);
+  const weak = el("div", "dailies-weak");
+  cols.append(weak);
+  const boughtOf = (id) => state.bought.find((b) => b.id === id);
+  function chooseTier(item, tier) {
+    if (state.closed) return;
+    const had = boughtOf(item.id);
+    if (had && had.tier === tier.id) {
+      state.wallet += had.price;
+      state.bought = state.bought.filter((b) => b !== had);
+      toast(`${t.undone} ${had.name}, +${had.price} ${t.refund}`);
+      return commit();
+    }
+    const back = had?.price ?? 0;
+    if (state.wallet + back < tier.price) return toast(t.notEnough);
+    state.wallet += back - tier.price;
+    const name = tier.label ? `${item.name} · ${tier.label}` : item.name;
+    state.bought = [...state.bought.filter((b) => b !== had), { id: item.id, tier: tier.id, name, price: tier.price }];
+    toast(`${t.bought} ${name}`);
+    commit();
   }
-  const boughtList = el("div", "dailies-bought");
-  yellow.append(yellowHead, buys, boughtList);
+  function buildWeak() {
+    weak.replaceChildren();
+    const spent = state.bought.reduce((sum, b) => sum + b.price, 0);
+    const head = el("div", "dailies-lib-head");
+    head.append(el("h3", "", t.yellowTitle), el("span", "dailies-lib-count", spent ? fill(WK.spent, { n: spent }) : WK.clean ?? ""));
+    weak.append(head, el("p", "dailies-weak-hint", t.yellowHint));
+    const grid = el("div", "dailies-weak-grid");
+    for (const item of buyList) {
+      const had = boughtOf(item.id);
+      const card = el("div", `dailies-weak-card${had ? " on" : ""}`);
+      const top = el("div", "dailies-weak-top");
+      top.append(el("b", "dailies-weak-name", item.name));
+      if (had) top.append(el("span", "dailies-weak-paid", `−${had.price}`));
+      card.append(top);
+      if (item.note) card.append(el("span", "dailies-weak-note", item.note));
+      const tiers = el("div", "dailies-weak-tiers");
+      for (const tier of item.tiers) {
+        const on = had?.tier === tier.id;
+        const btn = el("button", `dailies-weak-tier${on ? " on" : ""}`);
+        btn.type = "button";
+        btn.append(el("span", "", tier.label || WK.was || ""), el("b", "", `−${tier.price}`));
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+        btn.disabled = state.closed || (!on && state.wallet + (had?.price ?? 0) < tier.price);
+        btn.addEventListener("click", () => chooseTier(item, tier));
+        tiers.append(btn);
+      }
+      card.append(tiers);
+      if (item.fact) card.append(el("p", "dailies-weak-fact", item.fact));
+      grid.append(card);
+    }
+    weak.append(grid);
+    // полоса: что ушло сегодня
+    weakSum.replaceChildren();
+    if (!state.bought.length) weakSum.append(el("span", "dailies-weak-clean", WK.clean ?? ""));
+    for (const b of state.bought) weakSum.append(el("span", "dailies-weak-chip", `${b.name} −${b.price}`));
+  }
+  function setWeak(open) {
+    if (open) setLib(false);
+    board.classList.toggle("weak-open", open);
+    weakBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    weakBtn.textContent = open ? L.close ?? "" : WK.open ?? "";
+  }
+  weakBtn.addEventListener("click", () => setWeak(!board.classList.contains("weak-open")));
+  setWeak(false);
 
   // колбы (две колонки)
   const flasks = el("div", "dailies-flasks");
@@ -665,6 +1072,18 @@ function createDailies(box, ctx) {
       }
       addFlask("will", dayWill);
       state.willBonus = dayWill;
+      // письма за сданный день (почта, 27.10): Мир — итог дня; Хранитель меры — если одна сила отстаёт
+      const M = ctx.texts.mail ?? {};
+      const D = M.day?.[grade] ?? {};
+      postMail({ key: `day-${state.day}`, from: "mir", group: "day", groupTitle: M.dayTitle, title: D.title, text: fillMail(D.text, { will: dayWill - balanceBonus, half: W.day?.yellow ?? 0, full: W.day?.green ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0) }) + (balanceBonus ? fillMail(M.balanceBonus, { n: balanceBonus }) : ""), parts: [{ t: "day", grade, gradeName: D.title, base: W.day?.[grade] ?? 0, half: W.day?.yellow ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0), balance: balanceBonus, total: dayWill, note: D.note, bar: willBar(dayWill) }, growthPart(), expPart()].filter(Boolean) });
+      if (ctx.stats?.balance) {
+        const bal = powersBalance(ctx.stats, state.flasks, curve);
+        if (!bal.balanced && !bal.newcomer && bal.lead?.pair) {
+          const power = (ctx.stats.attrs ?? []).find((a) => a.key === bal.lead.pair)?.name ?? bal.lead.pair;
+          const ideas = (data.groups.find((g) => g.id === bal.lead.pair)?.tasks ?? []).filter((x) => x.attr !== "dev").slice(0, 2).map((x) => x.name.toLowerCase());
+          postMail({ key: `bal-${state.day}`, from: "mir", group: "day", groupTitle: M.dayTitle, title: fillMail(M.lagTitle, { power }), text: fillMail(M.lagText, { power, tasks: ideas.join(" или ") }), parts: [{ t: "mera", kind: "lag", text: fillMail(M.lagShort, { power, tasks: ideas.join(" или ") }) }] });
+        }
+      }
       window.setTimeout(() => toast(t.willDay.replace("{n}", String(dayWill))), 1600);
       if (balanceBonus) window.setTimeout(() => toast(t.willBonus.replace("{n}", String(balanceBonus))), 3200);
     }
@@ -674,7 +1093,7 @@ function createDailies(box, ctx) {
   foot.append(el("p", "dailies-hint", t.submitHint), stamp, submit);
 
   // админ-режим (?admin=1): временно, пока нет входа и ролей — потом только для роли admin
-  const isAdmin = params.get("admin") === "1";
+  const isAdmin = ADMIN;
   const adminBar = el("div", "dailies-admin");
   adminBar.hidden = !isAdmin;
   const reopen = el("button", "dailies-admin-btn", t.adminReopen);
@@ -712,6 +1131,8 @@ function createDailies(box, ctx) {
     state.flasks = freshFlasks(data);
     state.willBonus = 0;
     state.done = [];
+    state.sets = {};
+    state.dayGains = {};
     state.bought = [];
     state.closed = false;
     toast(t.adminDone);
@@ -719,42 +1140,68 @@ function createDailies(box, ctx) {
   });
   adminBar.append(el("span", "dailies-admin-label", t.adminLabel), reopen, reset);
 
-  function addFlask(key, amount) {
-    const flask = state.flasks[key];
-    const up = addPoints(curveOf(key), flask, amount);
-    for (let i = 0; i < up; i++) toast(t.levelUp[key]);
+  // «Рост за день» для письма (27.10): каждая выросшая сила — полоской от утра до вечера; сверху — Интеллект
+  function growthPart() {
+    const rows = [];
+    const before = {};
+    for (const [key, flask] of Object.entries(state.flasks)) {
+      const got = state.dayFlasks?.[key] ?? 0;
+      const was = { ...flask };
+      if (got) addPoints(curveOf(key), was, -got);
+      before[key] = was;
+      if (key === "will" || got <= 0) continue;
+      const up = flask.level > was.level;
+      rows.push({ attr: key, name: t.attrs[key] ?? key, gain: got, lvl: flask.level, from: up ? 0 : was.progress, to: flask.progress, need: levelNeed(curveOf(key), flask.level), up, say: up ? fillMail(ctx.texts.mail?.level?.[key], { n: flask.level }).replace(/^[^.]*\.\s*/, "") : "" });
+    }
+    if (!rows.length) return null;
+    const mastery = masteryNow();
+    const intelFrom = intellectOf(ctx.skills, mastery, before).value;
+    const intelTo = intellectOf(ctx.skills, mastery, state.flasks).value;
+    // ближе всех к новому уровню — это и есть «скоро +1 к Интеллекту»
+    let near = null;
+    for (const [key, flask] of Object.entries(state.flasks)) {
+      const need = levelNeed(curveOf(key), flask.level);
+      const left = need - flask.progress;
+      if (!near || left / need < near.left / near.need) near = { attr: key, name: t.attrs[key] ?? key, left, need, progress: flask.progress };
+    }
+    return { t: "growth", compact: true, rows, intel: { from: intelFrom, to: intelTo, near } }; // сводка дня — тонко (автор, 27.10); полная — в карточке персонажа
   }
 
-  function renderBought() {
-    boughtList.replaceChildren();
-    state.bought.forEach((item, index) => {
-      const row = el("div", "dailies-bought-row");
-      row.append(el("span", "", `${t.boughtToday} ${item.name} (−${item.price})`));
-      const undo = el("button", "dailies-undo", t.undo);
-      undo.type = "button";
-      undo.disabled = state.closed;
-      undo.addEventListener("click", () => {
-        if (state.closed) return;
-        state.wallet += item.price;
-        state.bought.splice(index, 1);
-        toast(`${t.undone} ${item.name}, +${item.price} ${t.refund}`);
-        commit();
-      });
-      row.append(undo);
-      boughtList.append(row);
-    });
+  // строка опыта для письма (27.10): сколько заработал, сколько ушло на слабости, сколько в руке
+  function expPart() {
+    const earned = Object.values(state.dayGains ?? {}).reduce((a, b) => a + b, 0);
+    const spent = (state.bought ?? []).reduce((a, b) => a + b.price, 0);
+    return { t: "exp", earned, spent, hand: state.wallet };
+  }
+
+  // полоска Воли для письма (27.10): где была до сданного дня и куда доползла
+  function willBar(gain) {
+    const flask = state.flasks.will;
+    const need = levelNeed(curveOf("will"), flask.level);
+    return { lvl: flask.level, from: Math.max(0, flask.progress - gain), to: flask.progress, need, up: flask.progress - gain < 0 };
+  }
+
+  function addFlask(key, amount) {
+    const flask = state.flasks[key];
+    // сколько очков сила набрала за день — для полосок «Рост за день» в письме (27.10)
+    state.dayFlasks ??= {};
+    state.dayFlasks[key] = (state.dayFlasks[key] ?? 0) + amount;
+    const up = addPoints(curveOf(key), flask, amount);
+    for (let i = 0; i < up; i++) {
+      toast(t.levelUp[key]);
+      // письмо Мира о новом уровне (почта, 27.10); один уровень — одно письмо
+      const n = flask.level - up + i + 1;
+      const M = ctx.texts.mail ?? {};
+      postMail({ key: `lvl-${key}-${n}`, from: "mir", group: "day", groupTitle: M.dayTitle, title: fillMail(M.levelTitle, { power: t.attrs[key] ?? key, n }), text: fillMail(M.level?.[key], { n }), parts: [{ t: "level", attr: key, name: t.attrs[key] ?? key, n, say: fillMail(M.level?.[key], { n }).replace(/^[^.]*\.\s*/, "") }] });
+    }
   }
 
   function render() {
+    buildLib();
     walletValue.textContent = String(state.wallet);
     const doneCount = state.done.length;
     stripMeta.textContent = `${doneCount} ${t.of} ${total} · ${t.wallet.toLowerCase()} ${state.wallet}${state.closed ? " · ✓" : ""}`;
-    for (const { task, row, check } of taskRows) {
-      check.checked = state.done.includes(task.id);
-      check.disabled = state.closed;
-      row.classList.toggle("done", check.checked);
-    }
-    for (const button of buyButtons) button.disabled = state.closed || state.wallet < Number(button.dataset.price);
+    for (const r of taskRows) r.update();
     for (const [key, node] of Object.entries(flaskNodes)) {
       const flask = state.flasks[key];
       const need = levelNeed(curveOf(key), flask.level);
@@ -762,8 +1209,8 @@ function createDailies(box, ctx) {
       node.value.textContent = `${flask.progress} / ${need}`;
       node.level.textContent = String(flask.level);
     }
-    renderBought();
-    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks };
+    buildWeak();
+    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks, wallet: state.wallet, stored: state.stored ?? 0, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], steps: { ...(state.steps ?? {}) } };
     document.dispatchEvent(new CustomEvent("hub:dailies", { detail: lastDailies }));
     board.classList.toggle("closed", state.closed);
     submit.disabled = state.closed;
@@ -771,13 +1218,30 @@ function createDailies(box, ctx) {
   }
 
   function commit() {
+    if (checkOpen()) buildTasks();
     saveDailiesState(state);
     render();
   }
 
+  // сводка недели и месяца (почта, 27.10): одним коротким письмом, когда период закончился
+  function periodMail() {
+    const M = ctx.texts.mail ?? {};
+    const total = state.picked?.length || data.pick?.default?.length || 8;
+    for (const p of periodSummaries(state.history, state.day, (r) => gradeDay(r, total))) {
+      const P = M[p.kind] ?? {};
+      const best = p.best ? fillMail(P.best, { power: t.attrs[p.best] ?? p.best }) : "";
+      const [y, m] = String(p.key).replace(/^month-/, "").split("-").map(Number);
+      const of = p.kind === "week" ? 7 : new Date(y, m, 0).getDate();
+      const bestName = p.best ? t.attrs[p.best] ?? p.best : "";
+      postMail({ key: p.key, from: "mir", title: P.title, text: fillMail(P.text, { ...p, best }), parts: [{ t: "period", kind: p.kind, days: p.days, of, green: p.green, done: p.done, xp: p.xp, best: p.best, bestName, note: P.note }] });
+    }
+  }
+  periodMail();
+
   // полночь: день закрывается сам, отметки обнуляются (проверка раз в минуту)
   window.setInterval(() => {
     if (rollDay(state, data)) {
+      periodMail();
       toast(t.newDay);
       commit();
       document.dispatchEvent(new CustomEvent("hub:day-closed", { detail: { by: "midnight" } }));
@@ -796,6 +1260,29 @@ function createDailies(box, ctx) {
 
   // пункт меню «Задания» открывает/закрывает ту же табличку
   document.addEventListener("hub:dailies-toggle", () => strip.click());
+  // из письма «Пора выше» (27.10): взять ступень сразу — или показать задание с пульсирующей «↑ выше»
+  document.addEventListener("hub:step-take", (event) => {
+    const { task: id, step } = event.detail ?? {};
+    const task = allTasks.find((x) => x.id === id);
+    if (!task?.steps?.length || (state.steps?.[id]?.step ?? task.step ?? 0) !== step) return;
+    state.steps[id] = stepUp(stepEntry(task), state.day);
+    toast(fill(t.sets?.raised, { name: stepInfo(task).cur.name }));
+    commit();
+  });
+  document.addEventListener("hub:step-show", (event) => {
+    const id = event.detail?.task;
+    document.querySelector(".modal-close")?.click();
+    if (board.hidden) strip.click();
+    window.setTimeout(() => {
+      const row = document.querySelector(`.dailies-sets[data-task="${CSS.escape(id ?? "")}"]`);
+      if (!row) return;
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      row.classList.remove("pulse-step");
+      void row.offsetWidth;
+      row.classList.add("pulse-step");
+      window.setTimeout(() => row.classList.remove("pulse-step"), 3200);
+    }, 350);
+  });
   strip.addEventListener("click", () => {
     if (editMode) return;
     // 17.10 (автор): день, неделя и месяц — одно окно «Задания» на одном фоне; табличка открывает его на вкладке «День»
@@ -1110,9 +1597,9 @@ async function main() {
   } catch {
     sandboxSaved = false;
   }
-  if (!ctx.editMode && (params.get("admin") === "1" || sandboxSaved)) {
+  if (!ctx.editMode && (ADMIN || sandboxSaved)) {
     const { startAdmin, showSandboxBanner, sandboxOn } = await import("./admin.js");
-    if (params.get("admin") === "1") startAdmin(ctx);
+    if (ADMIN) startAdmin(ctx);
     if (sandboxOn()) showSandboxBanner(texts);
   }
   // Мини-обучение при первом входе (в режиме правки не мешает).
