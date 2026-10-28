@@ -2433,3 +2433,6 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .modal-quests .in-quests .dailies-weak-fact { font-size: 13px; line-height: 1.35; }
 .modal-quests .in-quests .dailies-weak-hint { font-size: 14px; }
 .modal-quests .in-quests .dailies-weak-name { font-size: 20px; }
+/* админ-мод → правка интерфейса (28.10) */
+.adm-panel .adm-wide { width: 100%; }
+.adm-panel .adm-note { margin: 6px 0 0; font-size: 12px; line-height: 1.35; opacity: 0.8; }

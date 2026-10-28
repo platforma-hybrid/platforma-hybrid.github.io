@@ -1188,7 +1188,7 @@ function createDailies(box, ctx) {
     state.dayFlasks[key] = (state.dayFlasks[key] ?? 0) + amount;
     const up = addPoints(curveOf(key), flask, amount);
     for (let i = 0; i < up; i++) {
-      toast(t.levelUp[key]);
+      // 28.10 (автор): всплывашку «+1 к Мощи» в окне заданий не показываем — закрывала текст; новый уровень приходит в «Сводке дня»
       // письмо Мира о новом уровне (почта, 27.10); один уровень — одно письмо
       const n = flask.level - up + i + 1;
       const M = ctx.texts.mail ?? {};

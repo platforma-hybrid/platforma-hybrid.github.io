@@ -60,7 +60,7 @@ function daysAgo(n) {
 // ---------- модель ----------
 
 function freshDailies(data) {
-  return { day: dayKey(new Date()), wallet: 0, earned: 0, flasks: structuredClone(data.start.flasks), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3 };
+  return { day: dayKey(new Date()), wallet: 0, earned: 0, flasks: structuredClone(data.start.flasks), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3, picked: [...(data.pick?.default ?? [])] };
 }
 function loadDailies(data) {
   const s = ls.json("gibrid.dailies.v1", null);
@@ -86,6 +86,13 @@ function renumberHistory(state) {
 function activeTasks(data) {
   return data.groups.flatMap((g) => g.tasks).filter((t) => t.attr && t.attr !== "dev");
 }
+// «мои задания дня» (26.10): «Числа» играют выбранными заданиями — как настоящий игрок
+function pickedTasks(state, data) {
+  const all = activeTasks(data);
+  const ids = state.picked?.length ? state.picked : data.pick?.default ?? [];
+  const mine = all.filter((t) => ids.includes(t.id));
+  return mine.length ? mine : all;
+}
 // один сданный день — по тем же правилам, что доска заданий (25.10): сила +reward за дело; Воля +1 за дело,
 // +1 за отстающую силу пары; сданный день по цвету — красный +1, жёлтый +5, зелёный +12 (прибавка за равновесие здесь не считается)
 let PAIR = {};
@@ -105,14 +112,14 @@ function playDay(state, data, tasks) {
     attrs[t.attr] = (attrs[t.attr] ?? 0) + 1;
   }
   let dayWill = 0;
-  if (tasks.length) dayWill = W.day?.[gradeDay({ closedBy: "player", done: tasks.length }, activeTasks(data).length) ?? "red"] ?? 0;
+  if (tasks.length) dayWill = W.day?.[gradeDay({ closedBy: "player", done: tasks.length }, pickedTasks(state, data).length) ?? "red"] ?? 0;
   addFlask(state, "will", will + dayWill, data.willCurve ?? curve);
   state.history.push({ day: "", done: tasks.length, ids: tasks.map((t) => t.id), attrs, spent: 0, closedBy: "player", willBonus: dayWill });
   state.history = state.history.slice(-400);
 }
 // выбрать задания дня: доля от всех, с уклоном в одну силу
-function pickTasks(data, share, lean, seed) {
-  const all = activeTasks(data);
+function pickTasks(state, data, share, lean, seed) {
+  const all = pickedTasks(state, data);
   const n = Math.max(0, Math.min(all.length, Math.round(all.length * share)));
   let i = seed;
   const order = [...all].sort((a, b) => {
@@ -126,7 +133,7 @@ function simulate(state, data, days, share, lean = null) {
   for (let d = 0; d < days; d++) {
     // дни разные: зелёные, жёлтые, иногда пропуск
     const wobble = [1, 0.8, 1, 0.6, 1, 0.9, 0.4, 1, 0.85, 1][d % 10];
-    playDay(state, data, pickTasks(data, Math.min(1, share * wobble), lean, d));
+    playDay(state, data, pickTasks(state, data, Math.min(1, share * wobble), lean, d));
   }
   renumberHistory(state);
 }
@@ -264,6 +271,16 @@ export function startAdmin(ctx) {
   panel.append(el("p", "adm-help", sandboxOn() ? t.helpOn : t.helpOff));
 
   // готовые наборы
+  // 28.10 (автор): правка интерфейса из админ-мода — двигать блоки, менять размер (режим ?edit=1, hub.edit.js)
+  const ui = section(t.ui ?? "Интерфейс");
+  ui.append(
+    btn(t.uiEdit ?? "Двигать и менять размер", () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("edit", "1");
+      window.location.href = url.toString();
+    }, "adm-wide"),
+    el("p", "adm-note", t.uiNote ?? "Тащи блок мышью, колёсико — размер. Потом «Сохранить в файл» → hub.layout.json."),
+  );
   const pre = section(t.presets);
   for (const p of presets(ctx)) {
     pre.append(

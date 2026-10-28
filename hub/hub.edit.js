@@ -177,7 +177,15 @@ export function startEditMode(ctx, { placeItem }) {
     }
     window.setTimeout(() => (saveButton.textContent = "Сохранить в файл"), 2500);
   });
-  actions.append(saveButton, copyButton);
+  // выйти из правки — обратно в обычный хаб (28.10)
+  const exitButton = el("button", "edit-exit", "Выйти из правки");
+  exitButton.type = "button";
+  exitButton.addEventListener("click", () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("edit");
+    window.location.href = url.toString();
+  });
+  actions.append(saveButton, copyButton, exitButton);
 
   const help = el(
     "p",
