@@ -2,7 +2,7 @@
 // Тексты — hub.texts.json, данные персонажа — mock.character.json (позже — API).
 // Параметры адреса: ?edit=1 — режим правки раскладки, ?anim=0 — без анимаций.
 
-import { createKolo, gradeDay, monthStats } from "./kolo.js";
+import { createKolo, gradeDay, koloDate, monthStats } from "./kolo.js";
 import { initQuests } from "./quests.js";
 import { initAchievements } from "./achievements.js";
 import { initStats, powersBalance } from "./stats.js";
@@ -11,6 +11,7 @@ import { initPhone } from "./phone.js";
 import { addPoints, convertFlask, fractionalLevel, levelNeed, migrateFlask } from "./levels.js";
 import { dayNum as dayNumOf, stepDown, stepStatus, stepUp } from "./steps.js";
 import { initWallet } from "./wallet.js";
+import { needAnketa, openAnketa, openHealth, startSteps } from "./anketa.js";
 import { fill as fillMail, initMail, periodSummaries, postMail } from "./mail.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -507,15 +508,42 @@ function loadDailiesState(data) {
 
 // Новый день: прошлый день закрывается сам (если не сдан), отметки и покупки обнуляются.
 // Кошелёк опыта и колбы остаются.
-function rollDay(state, data) {
-  if (state.day === todayKey()) return false;
-  // attrs — сколько дел по каждому атрибуту (для итогов месяца в коло)
+// запись дня в историю (общая для полуночи, «Сдать вчера» и «Не смог отметить вовремя»)
+function dayRecord(src, data, closedBy) {
   const attrs = {};
-  for (const id of state.done) {
+  for (const id of src.done) {
     const attr = taskAttr(data, id);
     if (attr) attrs[attr] = (attrs[attr] ?? 0) + 1;
   }
-  state.history.push({ day: state.day, done: state.done.length, ids: [...state.done], attrs, spent: state.bought.reduce((sum, b) => sum + b.price, 0), closedBy: state.closed ? "player" : "midnight", ...(state.willBonus ? { willBonus: state.willBonus } : {}), ...(state.sets && Object.keys(state.sets).length ? { sets: { ...state.sets } } : {}), gains: { ...(state.dayGains ?? {}) }, bought: state.bought.map((b) => ({ name: b.name, price: b.price })) });
+  return { day: src.day, done: src.done.length, ids: [...src.done], attrs, spent: (src.bought ?? []).reduce((sum, b) => sum + b.price, 0), closedBy, ...(src.willBonus ? { willBonus: src.willBonus } : {}), ...(src.sets && Object.keys(src.sets).length ? { sets: { ...src.sets } } : {}), gains: { ...(src.dayGains ?? {}) }, bought: (src.bought ?? []).map((b) => ({ name: b.name, price: b.price })) };
+}
+
+// «Вчера ждёт до полудня» (автор, 28.10): уснул, не было света — несданный день не сгорает в полночь,
+// а ждёт до 12:00 следующего дня: можно дописать и сдать. После полудня закрывается сам, как раньше.
+const PENDING_UNTIL = 12;
+const isYesterday = (key) => {
+  const [y, m, d] = String(key).split("-").map(Number);
+  const prev = new Date();
+  prev.setDate(prev.getDate() - 1);
+  return y === prev.getFullYear() && m === prev.getMonth() + 1 && d === prev.getDate();
+};
+function closePending(state, data) {
+  if (!state.pending) return false;
+  if (isYesterday(state.pending.day) && new Date().getHours() < PENDING_UNTIL) return false;
+  state.history.push(dayRecord(state.pending, data, "midnight"));
+  state.history = state.history.slice(-400);
+  state.pending = null;
+  return true;
+}
+
+function rollDay(state, data) {
+  const closedOld = closePending(state, data);
+  if (state.day === todayKey()) return closedOld;
+  if (!state.closed && isYesterday(state.day) && new Date().getHours() < PENDING_UNTIL) {
+    state.pending = { day: state.day, picked: [...(state.picked ?? [])], done: [...state.done], sets: { ...(state.sets ?? {}) }, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], willBonus: state.willBonus ?? 0 };
+  } else {
+    state.history.push(dayRecord(state, data, state.closed ? "player" : "midnight"));
+  }
   state.history = state.history.slice(-400);
   state.day = todayKey();
   state.done = [];
@@ -605,7 +633,11 @@ function createDailies(box, ctx) {
   const libBtn = el("button", "dailies-lib-btn");
   libBtn.type = "button";
   libBtn.setAttribute("aria-expanded", "false");
-  top.append(wallet, el("p", "dailies-hint", t.hint), libBtn);
+  // «вчера ждёт до полудня» (28.10): спрятано — появляется только когда вчерашний день не сдан
+  const ydayBtn = el("button", "dailies-yday-btn");
+  ydayBtn.type = "button";
+  ydayBtn.hidden = true;
+  top.append(wallet, el("p", "dailies-hint", t.hint), ydayBtn, libBtn);
 
   // «мои задания дня» (26.10): человек выбирает 6–10 дел из библиотеки; справа — сама библиотека по силам
   const cols = el("div", "dailies-cols with-lib");
@@ -683,7 +715,8 @@ function createDailies(box, ctx) {
   // подходы «+N» (26.10, SPEC_PROGRAMS §2): 1-й подход — полная награда, дальше 60/40/25/15 %, на 5-м — потолок дня
   const SETS = data.sets ?? { share: [1, 0.6, 0.4, 0.25, 0.15], levels: { light: 1, medium: 3, hard: 5 } };
   const setGain = (i) => Math.max(1, Math.round(reward * (SETS.share[i] ?? 0)));
-  const setsMax = SETS.share.length;
+  // «Бережно» (анкета, 28.10): до 3 подходов — и это полная мера дня
+  let setsMax = state.careful ? 3 : SETS.share.length;
 
   function makeRow(task) {
     if (task.kind === "rep" || task.kind === "time") return makeSetsRow(task);
@@ -722,7 +755,7 @@ function createDailies(box, ctx) {
     const ladder = task.steps ?? [];
     const cur = ladder[entry.step] ?? { name: task.name, n: task.n };
     const status = ladder.length
-      ? stepStatus(data.stepRule, task.id, entry, state.history, state.day, { setsMax, last: ladder.length - 1, restricted: data.stepRule?.restricted })
+      ? stepStatus(data.stepRule, task.id, entry, state.history, state.day, { setsMax, last: ladder.length - 1, restricted: data.stepRule?.restricted || state.careful })
       : { offer: false, auto: false, mult: 1, canReturn: false };
     return { entry, cur, status };
   };
@@ -743,6 +776,35 @@ function createDailies(box, ctx) {
       postMail({ key: `step-${task.id}-${entry.step}-${entry.since}-offer`, from: "mera", title: M.stepTitle, text: fillMail(M.stepText, { name: cur.name, next }), parts: [{ t: "mera", kind: "step", text: fillMail(M.stepShort, { name: cur.name, next }), task: task.id, step: entry.step ?? 0, name: cur.name, next }] });
     }
   }
+
+  // анкета входа (28.10, SPEC_HEALTH §2): при первом открытии «Заданий» — сначала анкета
+  document.addEventListener("hub:quests-open", (event) => {
+    if (!needAnketa()) return;
+    event.stopImmediatePropagation();
+    openAnketa(ctx);
+  });
+  document.addEventListener("hub:open-health", () => openHealth(ctx));
+  document.addEventListener("hub:anketa-done", (event) => {
+    const { profile: P, again, wiped } = event.detail ?? {};
+    state.careful = Boolean(P?.careful);
+    setsMax = state.careful ? 3 : SETS.share.length;
+    if (!wiped) {
+      for (const [id, step] of Object.entries(startSteps(P))) if (byId[id]) state.steps[id] = { step, since: state.day };
+      // 60+: Ловкость начинается с равновесия (ВОЗ, Otago) — растяжка остаётся в библиотеке
+      if (["60-74", "75+"].includes(P?.age) && byId.balance && !state.open.includes("balance")) {
+        state.open = [...state.open, "balance"];
+        if (!state.done.includes("stretch")) state.picked = state.picked.filter((id) => id !== "stretch");
+        if (!state.picked.includes("balance")) state.picked = [...state.picked, "balance"];
+      }
+    }
+    if (!again) {
+      const A = ctx.texts.anketa ?? t.anketa ?? {};
+      const text = [A.trainerHello, P?.careful ? A.trainerDoctor : ""].filter(Boolean).join("\n\n");
+      postMail({ key: "trainer-hello", from: "mera", title: A.trainerTitle, text, parts: [{ t: "mera", kind: "hello", text }] });
+    }
+    buildTasks();
+    commit();
+  });
 
   // при входе: мир мог открыть новое, пока человека не было
   if (checkOpen()) saveDailiesState(state);
@@ -912,6 +974,11 @@ function createDailies(box, ctx) {
     else if (total >= pick.max) lib.append(el("p", "dailies-lib-warn", fill(L.full, { max: pick.max })));
     const grid = el("div", "dailies-lib-groups");
     lib.append(grid);
+    // «Моё здоровье» (анкета, 28.10): пройти заново или стереть
+    const health = el("button", "dailies-health-link", L.health ?? "");
+    health.type = "button";
+    health.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:open-health")));
+    lib.append(health);
     // графы по силам — как в окне заданий (автор, 27.10); программы «в разработке» видны, но взять их пока нельзя
     for (const group of data.groups) {
       const box = el("div", "dailies-col dailies-lib-col");
@@ -950,6 +1017,7 @@ function createDailies(box, ctx) {
   // библиотека — отдельным входом (автор, 27.10): окно заданий как было, кнопка открывает библиотеку на его месте
   const setLib = (open) => {
     if (open && board.classList.contains("weak-open")) setWeak(false);
+    if (open) board.classList.remove("yday-open");
     board.classList.toggle("lib-open", open);
     libBtn.setAttribute("aria-expanded", open ? "true" : "false");
     libBtn.textContent = open ? L.close ?? "" : L.open ?? "";
@@ -1029,12 +1097,120 @@ function createDailies(box, ctx) {
   }
   function setWeak(open) {
     if (open) setLib(false);
+    if (open) board.classList.remove("yday-open");
     board.classList.toggle("weak-open", open);
     weakBtn.setAttribute("aria-expanded", open ? "true" : "false");
     weakBtn.textContent = open ? L.close ?? "" : WK.open ?? "";
   }
   weakBtn.addEventListener("click", () => setWeak(!board.classList.contains("weak-open")));
   setWeak(false);
+
+  // ---------- вчерашний день: дописать и сдать до 12:00 ----------
+  const YD = t.yesterday ?? {};
+  const yday = el("div", "dailies-yday");
+  cols.append(yday);
+  const ydayLabel = (key) => {
+    const [y, m, d] = String(key).split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  };
+  function setYday(open) {
+    if (open) {
+      setLib(false);
+      if (board.classList.contains("weak-open")) setWeak(false);
+    }
+    board.classList.toggle("yday-open", open && Boolean(state.pending));
+    buildYday();
+  }
+  ydayBtn.addEventListener("click", () => setYday(!board.classList.contains("yday-open")));
+  function buildYday() {
+    const P = state.pending;
+    ydayBtn.hidden = !P;
+    if (!P) {
+      board.classList.remove("yday-open");
+      yday.replaceChildren();
+      return;
+    }
+    const open = board.classList.contains("yday-open");
+    ydayBtn.textContent = open ? YD.back ?? "" : YD.button ?? "";
+    ydayBtn.classList.toggle("on", open);
+    yday.replaceChildren();
+    const head = el("div", "dailies-lib-head");
+    head.append(el("h3", "", fill(YD.title, { date: ydayLabel(P.day) })), el("span", "dailies-lib-count", YD.until ?? ""));
+    yday.append(head, el("p", "dailies-yday-hint", YD.hint ?? ""));
+    const list = el("div", "dailies-yday-list");
+    const picked = (P.picked ?? []).filter((id) => byId[id]);
+    for (const id of picked) {
+      const task = byId[id];
+      const was = P.done.includes(id);
+      const row = el("label", `dailies-task dailies-yday-row${was ? " was" : ""}`);
+      const box2 = el("input");
+      box2.type = "checkbox";
+      box2.checked = was || (P.marked ?? []).includes(id);
+      box2.disabled = was;
+      box2.addEventListener("change", () => {
+        P.marked = box2.checked ? [...new Set([...(P.marked ?? []), id])] : (P.marked ?? []).filter((x) => x !== id);
+        saveDailiesState(state);
+        buildYday();
+      });
+      row.append(box2, el("span", "dailies-task-name", task.name), el("span", `dailies-tag tag-${task.attr}`, t.attrShort[task.attr] ?? ""));
+      if (was) row.append(el("span", "dailies-yday-was", YD.was ?? ""));
+      list.append(row);
+    }
+    yday.append(list);
+    const n = P.done.length + (P.marked ?? []).filter((id) => !P.done.includes(id)).length;
+    const foot2 = el("div", "dailies-yday-foot");
+    const send = el("button", "dailies-submit dailies-yday-send", fill(YD.send, { n, of: picked.length }));
+    send.type = "button";
+    send.addEventListener("click", submitYesterday);
+    const couldnt = el("button", "dailies-yday-rest", YD.couldnt ?? "");
+    couldnt.type = "button";
+    couldnt.title = YD.couldntHint ?? "";
+    couldnt.addEventListener("click", restYesterday);
+    foot2.append(send, couldnt);
+    yday.append(foot2);
+  }
+  // сдать вчера: дописанные дела дают то же, что дали бы вчера (опыт, сила, Воля), плюс Воля за цвет дня
+  function submitYesterday() {
+    const P = state.pending;
+    if (!P) return;
+    const fresh = (P.marked ?? []).filter((id) => byId[id] && !P.done.includes(id));
+    for (const id of fresh) {
+      const task = byId[id];
+      state.wallet += reward;
+      state.earned = (state.earned ?? 0) + reward;
+      P.dayGains = { ...(P.dayGains ?? {}), [id]: (P.dayGains?.[id] ?? 0) + reward };
+      if (data.flasks.includes(task.attr)) addFlask(task.attr, reward);
+      addFlask("will", W.perTask ?? 1);
+      P.done.push(id);
+    }
+    const total2 = (P.picked ?? []).filter((id) => byId[id]).length || P.done.length;
+    const grade = gradeDay({ closedBy: "player", done: P.done.length }, total2) ?? "red";
+    const dayWill = P.done.length ? W.day?.[grade] ?? 0 : 0;
+    if (dayWill) addFlask("will", dayWill);
+    P.willBonus = (P.willBonus ?? 0) + dayWill;
+    state.history.push(dayRecord(P, data, "player"));
+    state.history = state.history.slice(-400);
+    state.pending = null;
+    const M = ctx.texts.mail ?? {};
+    const D = M.day?.[grade] ?? {};
+    postMail({ key: `day-${P.day}`, from: "mir", title: fill(YD.mailTitle, { date: ydayLabel(P.day) }), text: fill(YD.mailText, { n: P.done.length, will: dayWill }), parts: [{ t: "day", grade, gradeName: D.title, base: W.day?.[grade] ?? 0, half: W.day?.yellow ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0), balance: 0, total: dayWill, note: YD.mailNote }] });
+    toast(fill(YD.done, { will: dayWill }));
+    board.classList.remove("yday-open");
+    commit();
+  }
+  // «Не смог отметить вовремя»: день не красный, а бережный — что успел, засчитано; Воля +1 за честность
+  function restYesterday() {
+    const P = state.pending;
+    if (!P) return;
+    addFlask("will", 1);
+    P.willBonus = (P.willBonus ?? 0) + 1;
+    state.history.push(dayRecord(P, data, "rest"));
+    state.history = state.history.slice(-400);
+    state.pending = null;
+    toast(YD.restDone ?? "");
+    board.classList.remove("yday-open");
+    commit();
+  }
 
   // колбы (две колонки)
   const flasks = el("div", "dailies-flasks");
@@ -1200,7 +1376,7 @@ function createDailies(box, ctx) {
     buildLib();
     walletValue.textContent = String(state.wallet);
     const doneCount = state.done.length;
-    stripMeta.textContent = `${doneCount} ${t.of} ${total} · ${t.wallet.toLowerCase()} ${state.wallet}${state.closed ? " · ✓" : ""}`;
+    stripMeta.textContent = `${doneCount} ${t.of} ${total} · ${t.wallet.toLowerCase()} ${state.wallet}${state.closed ? " · ✓" : ""}${state.pending ? ` · ${t.yesterday?.strip ?? ""}` : ""}`;
     for (const r of taskRows) r.update();
     for (const [key, node] of Object.entries(flaskNodes)) {
       const flask = state.flasks[key];
@@ -1210,6 +1386,7 @@ function createDailies(box, ctx) {
       node.level.textContent = String(flask.level);
     }
     buildWeak();
+    buildYday();
     lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks, wallet: state.wallet, stored: state.stored ?? 0, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], steps: { ...(state.steps ?? {}) } };
     document.dispatchEvent(new CustomEvent("hub:dailies", { detail: lastDailies }));
     board.classList.toggle("closed", state.closed);
@@ -1227,19 +1404,26 @@ function createDailies(box, ctx) {
   function periodMail() {
     const M = ctx.texts.mail ?? {};
     const total = state.picked?.length || data.pick?.default?.length || 8;
-    for (const p of periodSummaries(state.history, state.day, (r) => gradeDay(r, total))) {
+    // календарь коло (28.10): неделя — 10 дней, месяц — 30; ключи писем — по коло
+    const koloCal = (key) => {
+      const [y, m, d] = String(key).split("-").map(Number);
+      const k = koloDate(new Date(y, (m || 1) - 1, d || 1));
+      return { week: `kweek-${k.year}-${k.month}-${k.week}`, month: `kmonth-${k.year}-${k.month}`, weekLen: k.weekLen, monthLen: k.monthLen };
+    };
+    for (const p of periodSummaries(state.history, state.day, (r) => gradeDay(r, total), koloCal)) {
       const P = M[p.kind] ?? {};
       const best = p.best ? fillMail(P.best, { power: t.attrs[p.best] ?? p.best }) : "";
-      const [y, m] = String(p.key).replace(/^month-/, "").split("-").map(Number);
-      const of = p.kind === "week" ? 7 : new Date(y, m, 0).getDate();
+      const of = p.of;
       const bestName = p.best ? t.attrs[p.best] ?? p.best : "";
-      postMail({ key: p.key, from: "mir", title: P.title, text: fillMail(P.text, { ...p, best }), parts: [{ t: "period", kind: p.kind, days: p.days, of, green: p.green, done: p.done, xp: p.xp, best: p.best, bestName, note: P.note }] });
+      postMail({ key: p.key, from: "mir", title: P.title, text: fillMail(P.text, { ...p, best }), parts: [{ t: "period", kind: p.kind, days: p.days, of, green: p.green, done: p.done, xp: p.xp, best: p.best, bestName, note: P.note, koloMonth: Number(String(p.key).split("-")[2]) || koloDate().month }] });
     }
   }
   periodMail();
 
   // полночь: день закрывается сам, отметки обнуляются (проверка раз в минуту)
   window.setInterval(() => {
+    // полдень: вчерашний несданный день закрывается сам
+    if (state.day === todayKey() && closePending(state, data)) commit();
     if (rollDay(state, data)) {
       periodMail();
       toast(t.newDay);
@@ -1522,6 +1706,8 @@ function handleAction(action, ctx) {
 }
 
 function bindActions(ctx) {
+  // действия из окон и писем (28.10: «Открыть в коло» в сводке недели/месяца)
+  document.addEventListener("hub:action", (event) => typeof event.detail === "string" && handleAction(event.detail, ctx));
   ctx.stage.addEventListener("click", (event) => {
     if (ctx.editMode) return;
     const target = event.target instanceof Element ? event.target.closest("[data-action]") : null;
@@ -1576,6 +1762,11 @@ async function main() {
   buildStage(stage, ctx);
   ctx.modal = createModal(stage, texts);
   ctx.questsUi = initQuests(ctx, () => lastDailies);
+  // анкета входа: «Задания» из меню тоже сначала ведут в анкету (28.10)
+  if (ctx.questsUi?.open) {
+    const realOpen = ctx.questsUi.open.bind(ctx.questsUi);
+    ctx.questsUi.open = (...args) => (needAnketa() ? openAnketa(ctx) : realOpen(...args));
+  }
   ctx.achievementsUi = initAchievements(ctx, () => lastDailies);
   ctx.statsUi = initStats(ctx, () => lastDailies);
   ctx.skillsUi = initSkills(ctx, () => lastDailies);

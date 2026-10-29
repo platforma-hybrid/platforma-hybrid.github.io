@@ -85,7 +85,17 @@ const monthOf = (key) => String(key).split("-").slice(0, 2).join("-");
  * Возвращает [{ kind: "week"|"month", key, days, done, green, xp, best }] — только за закончившиеся периоды.
  * grade(rec) → "green" | "yellow" | "red" | null.
  */
-export function periodSummaries(history, today, grade) {
+/**
+ * cal(dayKey) → { week, month, weekLen, monthLen } — календарь сводок. По умолчанию обычный (неделя 7 дней);
+ * в хабе — календарь коло (неделя 10 дней, месяц 30), чтобы почта и коло не расходились (28.10).
+ */
+const plainCal = (key) => {
+  const w = weekStart(key);
+  const m = monthOf(key);
+  const [y, mm] = m.split("-").map(Number);
+  return { week: `week-${w}`, month: `month-${m}`, weekLen: 7, monthLen: new Date(y, mm, 0).getDate() };
+};
+export function periodSummaries(history, today, grade, cal = plainCal) {
   const out = [];
   const last = history[history.length - 1];
   if (!last) return out;
@@ -102,10 +112,10 @@ export function periodSummaries(history, today, grade) {
     delete s.attrs;
     return s;
   };
-  const w = weekStart(last.day);
-  if (w < weekStart(today)) out.push(sum(history.filter((r) => weekStart(r.day) === w), "week", `week-${w}`));
-  const m = monthOf(last.day);
-  if (m !== monthOf(today)) out.push(sum(history.filter((r) => monthOf(r.day) === m), "month", `month-${m}`));
+  const L = cal(last.day);
+  const now = cal(today);
+  if (L.week !== now.week) out.push({ ...sum(history.filter((r) => cal(r.day).week === L.week), "week", L.week), of: L.weekLen });
+  if (L.month !== now.month) out.push({ ...sum(history.filter((r) => cal(r.day).month === L.month), "month", L.month), of: L.monthLen });
   return out;
 }
 
@@ -115,7 +125,7 @@ export function postMail(letter) {
 
 export const unreadCount = (state = get()) => state.letters.filter((l) => !l.read).length;
 
-const SEALS = { mir: "☉", mera: "М", kazna: "К" };
+const SEALS = { mir: "☉", mera: "Т", kazna: "К" };
 
 let getDailies = () => null;
 
@@ -268,8 +278,8 @@ function levelsCard(levels, U) {
 function meraCard(p, U) {
   const card = el("div", "mail-card mail-mera-card");
   const head = el("div", "mail-card-head");
-  const title = p.kind === "step" ? U.meraStep : p.kind === "raised" ? U.meraRaised : U.meraLag;
-  head.append(el("span", "mail-seal from-mera", "М"), el("span", "mail-card-title", title ?? ""));
+  const title = p.kind === "step" ? U.meraStep : p.kind === "raised" ? U.meraRaised : p.kind === "hello" ? U.meraHello : U.meraLag;
+  head.append(el("span", "mail-seal from-mera", "Т"), el("span", "mail-card-title", title ?? ""));
   card.append(head, el("p", "mail-mera-text", p.text ?? ""));
   if (p.kind === "step" && p.task) card.append(stepActs(p, U));
   return card;
@@ -305,6 +315,12 @@ function periodCard(p, U) {
   card.append(line(U.daysWith, p.of ? `${p.days} ${U.of ?? "из"} ${p.of}` : String(p.days)), line(U.daysFull, String(p.green), "g-green"), line(U.tasks, String(p.done)), line(U.xp, sign(p.xp), "up"));
   if (p.bestName) card.append(line(p.kind === "month" ? U.bestMonth : U.bestWeek, p.bestName, `best a-${p.best}`));
   if (p.note) card.append(el("p", "mail-card-note", p.note));
+  if (p.koloMonth) {
+    const go = el("button", "mail-exp-go mail-kolo-go", U.openKolo ?? "");
+    go.type = "button";
+    go.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:action", { detail: `kolo-month:${p.koloMonth}` })));
+    card.append(go);
+  }
   return card;
 }
 

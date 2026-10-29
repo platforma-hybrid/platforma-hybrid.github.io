@@ -2436,3 +2436,76 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 /* админ-мод → правка интерфейса (28.10) */
 .adm-panel .adm-wide { width: 100%; }
 .adm-panel .adm-note { margin: 6px 0 0; font-size: 12px; line-height: 1.35; opacity: 0.8; }
+/* «вчера ждёт до полудня» (28.10) — кнопка мягко светится; панель на месте заданий, как библиотека */
+.dailies-yday-btn { appearance: none; flex: none; cursor: pointer; font-family: var(--font-title); font-weight: 700; font-size: 18px; color: #cfe6ff; padding: 5px 14px; white-space: nowrap;
+  background: rgba(60, 100, 140, 0.25); border: 1px solid #7f9bb3; border-radius: 4px; animation: yday-glow 2.6s ease-in-out infinite; }
+.dailies-yday-btn[hidden] { display: none; }
+.dailies-yday-btn.on { animation: none; background: rgba(60, 100, 140, 0.45); }
+.dailies-yday-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@keyframes yday-glow { 50% { box-shadow: 0 0 14px rgba(140, 190, 240, 0.55); } }
+@media (prefers-reduced-motion: reduce) { .dailies-yday-btn { animation: none; } }
+.dailies-yday { display: none; min-width: 0; box-sizing: border-box; flex-direction: column; gap: 8px; padding: 8px 12px 10px; border: 1px solid rgba(127, 155, 179, 0.5); border-radius: 6px; background: rgba(14, 24, 34, 0.45); }
+.dailies-board.yday-open .dailies-yday { display: flex; }
+.dailies-board.yday-open .dailies-mine, .dailies-board.yday-open .dailies-lib, .dailies-board.yday-open .dailies-weak { display: none; }
+.dailies-board.yday-open .dailies-foot { visibility: hidden; }
+.dailies-yday .dailies-lib-head h3 { color: #cfe6ff; }
+.dailies-yday-hint { margin: 0; font-size: 14px; color: #a9bccc; }
+.dailies-yday-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; }
+.dailies-yday-row.was { opacity: 0.6; }
+.dailies-yday-was { font-size: 12px; color: #9be08f; }
+.dailies-yday-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 6px; }
+.dailies-yday-send { font-size: 20px; }
+.dailies-yday-rest { appearance: none; background: none; border: 0; padding: 4px 0; font: inherit; font-size: 14px; color: #a9bccc; text-decoration: underline dotted; cursor: pointer; }
+.dailies-yday-rest:hover { color: #cfe6ff; }
+.dailies-yday-rest:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.modal-quests .in-quests .dailies-yday { height: 404px; overflow-y: auto; }
+.ks-bead.rest { background: #7f9bb3; box-shadow: 0 0 8px rgba(127, 155, 179, 0.6); }
+.ph-sheet .dailies-yday-list { grid-template-columns: 1fr; }
+.modal-quests .in-quests .dailies-yday-hint { font-size: 14px; line-height: 1.35; }
+/* анкета входа (28.10) — в стиле хаба: дерево и золото, таблички-кнопки */
+.modal.modal-anketa { width: 640px; max-width: calc(100vw - 40px); }
+.anketa { display: flex; flex-direction: column; gap: 12px; text-align: left; color: #efe4cc; min-height: 380px; }
+.anketa-dots { display: flex; gap: 6px; }
+.anketa-dots i { width: 8px; height: 8px; border-radius: 50%; background: #5a4630; }
+.anketa-dots i.on { background: var(--gold); }
+.anketa-title { margin: 0; font-family: var(--font-title); font-size: 30px; color: #f0d89a; }
+.anketa-text { margin: 0; font-size: 17px; line-height: 1.45; color: #cdbb98; }
+.anketa-lab { margin-top: 4px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #b3a385; }
+.anketa-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.anketa-chip { appearance: none; font: inherit; font-size: 16px; cursor: pointer; padding: 6px 12px; border-radius: 5px; color: #efe4cc; border: 1px solid #8a6a3a; background: rgba(42, 29, 18, 0.9); }
+.anketa-chip:hover { border-color: var(--gold); }
+.anketa-chip.on { border-color: var(--gold); background: #5a4318; color: #ffe3a0; box-shadow: 0 0 10px rgba(255, 210, 122, 0.35); }
+.anketa-chip:focus-visible, .anketa-go:focus-visible, .anketa-alt:focus-visible, .anketa-skip:focus-visible, .anketa-back:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.anketa-q { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 15px; padding: 4px 0; border-bottom: 1px dashed rgba(138, 106, 58, 0.6); }
+.anketa-q .anketa-chip { font-size: 13px; padding: 2px 10px; }
+.anketa-secret { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid rgba(111, 179, 204, 0.45); border-radius: 6px; background: rgba(16, 32, 36, 0.55); font-size: 15px; }
+.anketa-secret b { color: #a9dcf0; }
+.anketa-honest { margin: 0; font-size: 13px; font-style: italic; color: #9c8c6c; }
+.anketa-mode { margin: 0; padding: 8px 12px; border: 1px solid #7f9bb3; border-radius: 6px; background: rgba(20, 36, 52, 0.6); color: #cfe6ff; font-size: 15px; }
+.anketa-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 8px; }
+.anketa-go { appearance: none; cursor: pointer; font-family: var(--font-title); font-weight: 700; font-size: 19px; color: #1b120a; padding: 9px 20px; border: 0; border-radius: 6px; background: linear-gradient(180deg, #f6c66a, #c9953e); }
+.anketa-go:hover { box-shadow: 0 0 16px rgba(255, 200, 110, 0.55); }
+.anketa-alt { appearance: none; cursor: pointer; font: inherit; font-size: 15px; color: #efe4cc; padding: 8px 14px; border: 1px solid #8a6a3a; border-radius: 6px; background: none; }
+.anketa-skip, .anketa-back { appearance: none; cursor: pointer; font: inherit; font-size: 14px; color: #9c8c6c; background: none; border: 0; padding: 4px 0; text-decoration: underline dotted; align-self: flex-start; }
+.dailies-health-link { appearance: none; align-self: flex-end; margin-top: 4px; cursor: pointer; font: inherit; font-size: 13px; color: #a9bccc; background: none; border: 0; text-decoration: underline dotted; }
+.ph-modal .modal.modal-anketa .anketa-title { font-size: 26px; }
+.modal.modal-anketa #modal-title { display: none; }
+.modal.modal-anketa p.anketa-text { font-size: 17px; font-style: normal; }
+.modal.modal-anketa p.anketa-honest { font-size: 13px; }
+.modal.modal-anketa p.anketa-mode { font-size: 15px; font-style: normal; }
+.anketa-q .anketa-chips { flex-wrap: nowrap; flex: none; }
+.mail-mera-text { white-space: pre-line; }
+/* телефон: почта с числом новых, мягко светится, когда пришло письмо (28.10) */
+.ph-icon { position: relative; }
+.ph-mail-badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #c0392b; color: #fff; font-size: 12px; line-height: 18px; text-align: center; }
+.ph-mail-badge[hidden] { display: none; }
+.ph-icon.has-new, .mail-button.has-new { animation: mail-glow 2.8s ease-in-out infinite; }
+@keyframes mail-glow { 50% { box-shadow: 0 0 14px rgba(255, 210, 122, 0.6); } }
+@media (prefers-reduced-motion: reduce) { .ph-icon.has-new, .mail-button.has-new { animation: none; } }
+/* почта на телефоне (28.10): письмо целиком прокручивается, без лишнего */
+.ph-modal .modal.modal-mail .mail-rule, .ph-modal .modal.modal-mail .mail-note { display: none; }
+.ph-modal .modal.modal-mail .mail-pane { overflow-y: auto; padding: 12px 14px; gap: 8px; max-height: calc(100vh - 110px); }
+.ph-modal .modal.modal-mail .mail-parts { max-height: none; overflow: visible; }
+.ph-modal .modal.modal-mail .mail-seal.big { width: 40px; height: 40px; font-size: 20px; }
+.ph-modal .modal.modal-mail .mail-pane h3 { font-size: 24px; }
+.ph-modal .modal.modal-mail .mail-list { max-height: calc(100vh - 110px); }

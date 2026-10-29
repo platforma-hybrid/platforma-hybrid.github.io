@@ -91,12 +91,13 @@ function allDays(d) {
 
 // ---------- оценка дня (зарубки недели, бусины) ----------
 // Зелёный — закрыл всё; жёлтый — неплохо (половина и больше); красный — плохо (меньше половины или не сдал сам).
-export const DAY_COLORS = { green: "#4cc96a", yellow: "#f2c14e", red: "#e0473a" };
+export const DAY_COLORS = { green: "#4cc96a", yellow: "#f2c14e", red: "#e0473a", rest: "#7f9bb3" };
 const GRADE = { green: 1, yellow: 0.5 }; // доля сделанных заданий; пороги можно поменять
 // Очки пути (рейтинг сезона): день по оценке + неделя целиком + месяц целиком. Сезон пока = год коло.
 export const PATH_POINTS = { green: 3, yellow: 2, red: 1, week: 15, month: 40 };
 export function gradeDay(rec, total) {
   if (!rec || rec.closedBy == null) return null;
+  if (rec.closedBy === "rest") return "rest"; // «Не смог отметить вовремя» (28.10) — бережный, не красный
   if (rec.closedBy !== "player") return "red";
   const share = total ? (rec.done ?? 0) / total : 0;
   return share >= GRADE.green ? "green" : share >= GRADE.yellow ? "yellow" : "red";

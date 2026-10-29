@@ -46,7 +46,18 @@ export function initPhone(ctx, { refit }) {
   date.addEventListener("click", () => press(date.dataset.action ?? ""));
   dailies.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:dailies-toggle")));
   status.addEventListener("click", () => press("modal:status"));
-  mail.addEventListener("click", () => press("modal:mail"));
+  // почта (28.10): открывает настоящее окно почты; число новых — как на кнопке хаба
+  mail.addEventListener("click", () => ctx.stage.querySelector(".mail-button")?.click());
+  const mailBadge = el("span", "ph-mail-badge");
+  mail.append(mailBadge);
+  const syncMail = () => {
+    const n = ctx.stage.querySelector(".mail-badge:not([hidden])")?.textContent ?? "";
+    mailBadge.textContent = n;
+    mailBadge.hidden = !n;
+    mail.classList.toggle("has-new", Boolean(n));
+  };
+  document.addEventListener("hub:mail-changed", () => window.setTimeout(syncMail, 0));
+  window.setTimeout(syncMail, 0);
   loc.addEventListener("click", () => press("modal:location"));
 
   kolo.addEventListener("click", (event) => {
