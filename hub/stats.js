@@ -220,6 +220,7 @@ export function initStats(ctx, getDailies) {
   const byKey = Object.fromEntries(all.map((a) => [a.key, a]));
   const taskInfo = {};
   for (const g of ctx.dailies?.groups ?? []) for (const task of g.tasks ?? []) taskInfo[task.id] = task;
+  for (const task of ctx.dailies?.retired ?? []) taskInfo[task.id] ??= task; // снятые задания — для старой истории
   const taskAttr = (id) => taskInfo[id]?.attr;
   let selected = lib.defaultSelected;
   let quests = {};

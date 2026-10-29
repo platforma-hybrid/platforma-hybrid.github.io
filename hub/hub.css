@@ -2679,3 +2679,13 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .anketa-well-btn.on { outline: 2px solid var(--gold); outline-offset: 2px; }
 .anketa-well-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .ph-modal .anketa-well { grid-template-columns: 1fr; }
+
+/* Админ: «Начать заново» (29.10) — вторая кнопка подряд, красным, когда ждёт подтверждения */
+.adm-panel .adm-wide + .adm-wide { margin-top: 6px; }
+.adm-panel button.armed { background: #a8261a; color: #fff; border-color: #e0473a; }
+
+/* Карточка на телефоне (аудит 29.10): заголовок меньше, переключатели переносятся, не обрезаются */
+.ph-modal .pcard .card-head { flex-wrap: wrap; gap: 8px; }
+.ph-modal .pcard .card-title { font-size: 20px; }
+.ph-modal .pcard .card-head-r { flex-wrap: wrap; gap: 6px; }
+.ph-modal .pcard .card-switch-btn { font-size: 13px; padding: 4px 10px; }

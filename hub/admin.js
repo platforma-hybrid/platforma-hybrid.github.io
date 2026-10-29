@@ -281,6 +281,41 @@ export function startAdmin(ctx) {
     }, "adm-wide"),
     el("p", "adm-note", t.uiNote ?? "Тащи блок мышью, колёсико — размер. Потом «Сохранить в файл» → hub.layout.json."),
   );
+  // 29.10 (автор): «Сбросить всё» — как новый игрок; «Сбросить до анкеты» — прогресс остаётся, анкета спросит снова.
+  // Двойное нажатие: первое — «Точно? Нажми ещё раз», через 4 секунды кнопка остывает.
+  const fresh = section(t.resetTitle ?? "Начать заново");
+  const armedBtn = (text, onDo) => {
+    const b = btn(text, () => {
+      if (b.dataset.armed !== "1") {
+        b.dataset.armed = "1";
+        b.textContent = t.resetSure ?? "Точно? Нажми ещё раз";
+        b.classList.add("armed");
+        window.setTimeout(() => {
+          b.dataset.armed = "";
+          b.textContent = text;
+          b.classList.remove("armed");
+        }, 4000);
+        return;
+      }
+      onDo();
+      window.location.reload();
+    }, "adm-wide");
+    return b;
+  };
+  const KEEP = new Set(["gibrid.admin.on", "gibrid.admin.fold", "gibrid.dataEpoch"]);
+  fresh.append(
+    armedBtn(t.resetAll ?? "Сбросить всё", () => {
+      const all = [];
+      try {
+        for (let i = 0; i < window.localStorage.length; i++) all.push(window.localStorage.key(i));
+      } catch {
+        /* хранилище закрыто — стирать нечего */
+      }
+      for (const k of all) if (k && (k.startsWith("gibrid.") || k === "hub.tour.v1") && !KEEP.has(k)) ls.set(k, null);
+    }),
+    armedBtn(t.resetAnketa ?? "Сбросить до анкеты", () => ls.set("gibrid.health.v1", null)),
+    el("p", "adm-note", t.resetNote ?? ""),
+  );
   const pre = section(t.presets);
   for (const p of presets(ctx)) {
     pre.append(
