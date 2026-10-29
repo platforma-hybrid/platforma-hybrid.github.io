@@ -2509,3 +2509,173 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .ph-modal .modal.modal-mail .mail-seal.big { width: 40px; height: 40px; font-size: 20px; }
 .ph-modal .modal.modal-mail .mail-pane h3 { font-size: 24px; }
 .ph-modal .modal.modal-mail .mail-list { max-height: calc(100vh - 110px); }
+/* римские подходы — просторнее (автор, 29.10) */
+.dailies-sets.ui-roman .dailies-dots { gap: 7px; }
+.dailies-sets.ui-roman .dailies-dot { min-width: 32px; padding: 2px 6px; font-size: 0.9em; }
+.dailies-sets.ui-roman .dailies-pts { margin-left: 6px; }
+/* ---------- полная карточка персонажа (29.10, SPEC_CARD) ---------- */
+.modal.modal-card { width: 1240px; max-width: calc(100vw - 40px); }
+.modal.modal-card #modal-title { display: none; }
+.pcard { display: flex; flex-direction: column; gap: 12px; text-align: left; color: #efe4cc; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-right: 40px; }
+.card-title { margin: 0; font-family: var(--font-title); font-size: 30px; color: #f0d89a; }
+.card-switch { display: flex; border: 1px solid #8a6a3a; border-radius: 6px; overflow: hidden; }
+.card-switch-btn { appearance: none; font: inherit; font-size: 15px; padding: 6px 14px; cursor: pointer; color: #cdbb98; background: none; border: 0; }
+.card-switch-btn.on { background: #5a4318; color: #ffe3a0; }
+.card-switch-btn:focus-visible, .card-verified:focus-visible, .card-health:focus-visible, .card-act-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.card-grid { display: grid; grid-template-columns: 280px minmax(0, 1fr) 260px; gap: 12px; align-items: start; }
+.card-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card-box { display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; border: 1px solid rgba(201, 149, 62, 0.4); border-radius: 6px; background: rgba(0, 0, 0, 0.28); }
+.card-lab { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #b3a385; }
+.card-mini { font-size: 12px; color: #9c8c6c; }
+.card-note { margin: 0; font-size: 13px; line-height: 1.4; color: #cdbb98; }
+.card-who { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px; border: 1px solid rgba(201, 149, 62, 0.5); border-radius: 6px; background: radial-gradient(120% 90% at 50% 0%, rgba(201, 149, 62, 0.18), rgba(0, 0, 0, 0.3)); text-align: center; }
+.card-portrait { width: 132px; height: 132px; border-radius: 8px; border: 2px solid var(--gold-deep); background: #2a1d12; overflow: hidden; }
+.card-portrait img { width: 100%; height: 100%; object-fit: cover; }
+.card-name { font-family: var(--font-title); font-size: 24px; color: #f0d89a; }
+.card-sub { font-size: 14px; color: #cdbb98; }
+.card-verified { appearance: none; cursor: pointer; font: inherit; font-size: 13px; padding: 2px 10px; border-radius: 10px; color: #cdbb98; background: none; border: 1px solid #8a6a3a; }
+.card-verified.yes { color: #9be08f; border-color: #3d8a3a; }
+.card-rank-val, .card-kpd-val, .card-big { font-family: var(--font-title); font-size: 30px; line-height: 1; color: var(--fire); }
+.card-kpd-val { color: #f0d89a; }
+.card-path-val { display: flex; align-items: baseline; gap: 8px; }
+.card-path-val b { font-family: var(--font-title); font-size: 26px; color: #f0d89a; }
+.card-path-val span { font-size: 13px; color: #b3a385; }
+.card-bar { height: 8px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.5); border: 1px solid color-mix(in srgb, var(--a, #c9953e) 70%, transparent); }
+.card-bar-fill { display: block; height: 100%; background: linear-gradient(180deg, var(--a-text, #f0d89a), var(--a, #c9953e)); }
+.card-bar.path .card-bar-fill, .card-bar.tile .card-bar-fill { background: linear-gradient(90deg, #8a6a2a, #e8c272); }
+.card-pow { display: flex; flex-direction: column; gap: 3px; padding: 3px 0 3px 10px; border-left: 3px solid var(--a, #c9953e); }
+.card-pow-top { display: flex; align-items: baseline; gap: 10px; }
+.card-pow-name { flex: 1; font-size: 16px; color: var(--a-text, #f0d89a); }
+.card-pow-left { font-size: 12px; color: #9c8c6c; }
+.card-pow-lvl { min-width: 28px; text-align: right; font-family: var(--font-title); font-size: 20px; color: var(--a-text, #f0d89a); }
+.card-blue { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; padding-top: 6px; border-top: 1px solid rgba(143, 202, 255, 0.25); }
+.card-intel .card-pow-name { color: #8fcaff; }
+.card-sum { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; padding: 6px 10px; border: 1px solid rgba(201, 149, 62, 0.45); border-radius: 5px; background: rgba(201, 149, 62, 0.08); cursor: help; }
+.card-sum span { font-family: var(--font-title); font-size: 18px; color: #f0d89a; }
+.card-sum b { font-family: var(--font-title); font-size: 24px; color: #ffe3a0; }
+.card-sum.gold { border-color: var(--gold); }
+.card-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.card-tile { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; border: 1px solid rgba(201, 149, 62, 0.3); border-radius: 5px; background: rgba(0, 0, 0, 0.2); }
+.card-tile-name { font-size: 14px; color: #cdbb98; }
+.card-tile-val { font-family: var(--font-title); font-size: 20px; color: #f0d89a; }
+.card-faces { display: flex; gap: 10px; justify-content: center; }
+.card-face { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-title); font-size: 26px; color: rgba(243, 212, 138, 0.5); border: 1px dashed rgba(201, 149, 62, 0.5); background: radial-gradient(circle, rgba(201, 149, 62, 0.12), transparent 70%); }
+.card-line { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.card-line b { color: #f0d89a; font-weight: 600; }
+.card-health { appearance: none; cursor: pointer; font: inherit; font-size: 14px; padding: 8px 12px; color: #a9dcf0; border: 1px solid rgba(111, 179, 204, 0.5); border-radius: 6px; background: rgba(16, 32, 36, 0.5); }
+.card-act-head { display: flex; justify-content: space-between; align-items: center; }
+.card-act-tabs { display: flex; gap: 4px; }
+.card-act-tab { appearance: none; cursor: pointer; font: inherit; font-size: 13px; padding: 2px 10px; color: #cdbb98; border: 1px solid #8a6a3a; border-radius: 4px; background: none; }
+.card-act-tab.on { background: #5a4318; color: #ffe3a0; }
+.card-chart { width: 100%; height: 110px; }
+.card-chart-half { stroke: rgba(201, 149, 62, 0.45); stroke-dasharray: 6 6; }
+.card-chart-area { fill: rgba(232, 194, 114, 0.12); }
+.card-chart-line { fill: none; stroke: #e8c272; stroke-width: 3; }
+.card-chart-dot { fill: #ffe3a0; }
+.card-chart-empty { fill: #9c8c6c; font-size: 22px; }
+.card-swamp summary { cursor: pointer; font-family: var(--font-title); font-size: 17px; color: #cdbb98; }
+.card-spent-tog { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #cdbb98; }
+.card-days { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 16px; max-height: 160px; overflow-y: auto; }
+.card-day { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.card-day-dot { width: 10px; height: 10px; border-radius: 50%; background: #5a4630; flex: none; }
+.card-day.g-green .card-day-dot { background: #4cc96a; }
+.card-day.g-yellow .card-day-dot { background: #f2c14e; }
+.card-day.g-red .card-day-dot { background: #e0473a; }
+.card-day.g-rest .card-day-dot { background: #7f9bb3; }
+.card-day-spent { margin-left: auto; color: #f0b08f; }
+.ph-modal .modal.modal-card .card-grid { grid-template-columns: 1fr; }
+.ph-modal .modal.modal-card .card-days { grid-template-columns: 1fr 1fr; }
+.modal.modal-card .modal-body { width: 100%; max-width: none; }
+.pcard { width: 100%; }
+/* карточка: силы — спокойно и дорого (автор, 29.10): золотые полоски, имена — золотистым шрифтом, без пёстрых цветов */
+.pcard .card-pow { border-left: 0; padding: 4px 0; }
+.pcard .card-pow-name { font-family: var(--font-title); font-size: 19px; font-weight: 700; letter-spacing: 0.3px; color: #e8c97e; }
+.pcard .card-pow-lvl { font-family: var(--font-title); font-size: 22px; color: #ffe3a0; text-shadow: 0 0 8px rgba(255, 210, 122, 0.35); }
+.pcard .card-pow-left { color: #9c8c6c; font-style: italic; }
+.pcard .card-bar.pow { height: 7px; border: 1px solid rgba(201, 149, 62, 0.55); background: rgba(0, 0, 0, 0.55); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7); }
+.pcard .card-bar.pow .card-bar-fill { background: linear-gradient(180deg, #ffe39a, #e8b84a 55%, #b07a1e); box-shadow: 0 0 8px rgba(255, 200, 100, 0.45); }
+.pcard .card-blue { border-top-color: rgba(201, 149, 62, 0.3); }
+.pcard .card-pow.a-will .card-pow-name, .pcard .card-intel .card-pow-name { color: #e8c97e; }
+.pcard .card-pow.a-will .card-pow-lvl, .pcard .card-intel .card-pow-lvl { color: #ffe3a0; }
+/* карточка, 29.10: Воля и Интеллект сверху голубыми именами, строка Тренера, знаки значками, ранг/КПД — одной строкой */
+.pcard .card-blue.top { margin: 0 0 4px; padding: 0 0 8px; border-top: 0; border-bottom: 1px solid rgba(201, 149, 62, 0.3); }
+.pcard .card-blue .card-pow-name { color: #8fcaff; }
+.pcard .card-blue .card-pow-lvl { color: #a9d8ff; text-shadow: 0 0 8px rgba(120, 180, 255, 0.35); }
+.card-trainer { margin: 2px 0 4px; padding: 6px 10px; border-left: 3px solid #6fb3cc; border-radius: 0 4px 4px 0; background: rgba(16, 32, 36, 0.5); font-family: var(--font-title); font-style: italic; font-size: 16px; color: #d9ecf2; }
+.card-soon-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px dashed rgba(201, 149, 62, 0.35); border-radius: 6px; font-size: 14px; color: #b3a385; }
+.card-signs { appearance: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.card-signs:hover { border-color: var(--gold); }
+.card-signs:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.card-signs-head { display: flex; justify-content: space-between; align-items: baseline; }
+.card-medals { display: flex; gap: 10px; justify-content: center; padding-top: 4px; }
+.card-medal { width: 62px; height: 62px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  border: 2px solid #e8c27a; background: radial-gradient(circle at 35% 30%, #fff1c4 0%, #e8b84a 35%, #8a5a1a 100%); box-shadow: 0 0 10px rgba(255, 200, 100, 0.35), inset 0 -3px 6px rgba(0, 0, 0, 0.35); color: #2a1408; }
+.card-medal b { font-family: var(--font-title); font-size: 18px; line-height: 1; }
+.card-medal span { font-size: 9px; line-height: 1; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard .card-blue .card-pow.a-will .card-pow-name { color: #8fcaff; }
+.pcard .card-blue .card-pow.a-will .card-pow-lvl { color: #a9d8ff; }
+.modal.modal-card p.card-trainer { font-size: 16px; line-height: 1.35; }
+.pcard .card-chart { height: 80px; }
+.pcard .card-pow { padding: 2px 0; }
+.modal.modal-card { max-height: calc(100vh - 24px); overflow-y: auto; }
+/* «до 10-го — ещё 14» — только при наведении (автор, 29.10) */
+.pcard .card-pow-left { display: none; }
+.pcard .card-pow { cursor: help; }
+
+/* Карточка: лист «Активность» (автор, 29.10) — столбики опыта, значки ступеней, пояснение, паутина баланса */
+.pcard .card-head-r { display: flex; gap: 10px; align-items: center; }
+.pcard .card-signs.soon { cursor: default; }
+.pcard .act { display: flex; flex-direction: column; gap: 8px; }
+.pcard .act-head { display: flex; justify-content: space-between; align-items: center; }
+.pcard .act-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pcard .act-chip { appearance: none; font: inherit; font-size: 15px; padding: 4px 14px; border-radius: 14px; border: 1px solid rgba(236, 196, 116, 0.5); background: none; color: #d9c08a; cursor: pointer; }
+.pcard .act-chips.sub .act-chip { font-size: 13px; padding: 2px 10px; }
+.pcard .act-chip.on { background: #c9953e; color: #1b120a; border-color: #f3d48a; }
+.pcard .act-chip.blue { color: #8cc4f0; border-color: rgba(140, 196, 240, 0.5); }
+.pcard .act-chip.blue.on { background: #3d6a8e; color: #e6f3ff; border-color: #8cc4f0; }
+.pcard .act-chip:focus-visible, .pcard .act-bar:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.pcard .act-grid { display: grid; grid-template-columns: 1fr 330px; gap: 22px; }
+.pcard .act-right { display: flex; flex-direction: column; gap: 4px; border-left: 1px solid rgba(236, 196, 116, 0.18); padding-left: 18px; }
+.pcard .act-bars { width: 100%; height: auto; display: block; }
+.pcard .act-axis { stroke: rgba(236, 196, 116, 0.3); }
+.pcard .act-shadow { fill: rgba(243, 212, 138, 0.12); }
+.pcard .act-bar { cursor: pointer; }
+.pcard .act-bar:hover .act-fill { filter: brightness(1.12); }
+.pcard .act-bar.on .act-fill { stroke: #fff3c8; stroke-width: 2; }
+.pcard .act-num { font: bold 12px Georgia, serif; fill: #f3d48a; }
+.pcard .act-num.in { fill: #3a250c; }
+.pcard .act-lab { font: 12px Georgia, serif; fill: #b89d68; }
+.pcard .act-plus { font: 11px Georgia, serif; fill: #fff0b8; }
+.pcard .act-ev-bg { fill: rgba(243, 212, 138, 0.18); }
+.pcard .act-empty { fill: #9c8c6c; font-size: 20px; }
+.pcard .act-ex { border-top: 1px solid rgba(236, 196, 116, 0.25); padding-top: 8px; }
+.pcard .act-ex-h { display: flex; gap: 10px; align-items: baseline; margin-bottom: 4px; }
+.pcard .act-ex-h b { font: 600 17px Georgia, serif; color: #f3d48a; }
+.pcard .act-ex-h span { font-size: 13px; color: #b89d68; }
+.pcard .act-row { display: grid; grid-template-columns: 180px 160px 1fr; font-size: 15px; padding: 3px 0; border-bottom: 1px dashed rgba(236, 196, 116, 0.12); }
+.pcard .act-row span { color: #c9b07a; }
+.pcard .act-row b { color: #f3d48a; }
+.pcard .act-row i { font-style: normal; font-size: 14px; color: #b89d68; }
+.pcard .act-row i.up { color: #e9d9a8; }
+.pcard .act-tip { display: block; margin-top: 6px; }
+.pcard .act-web { width: 100%; height: auto; }
+.pcard .act-web-grid { fill: none; stroke: rgba(236, 196, 116, 0.18); }
+.pcard .act-web-lab { font: 14px Georgia, serif; fill: #f3d48a; }
+.pcard .act-web-ago { fill: rgba(243, 212, 138, 0.06); stroke: rgba(243, 212, 138, 0.45); stroke-dasharray: 4 4; }
+.pcard .act-web-now { fill: rgba(243, 212, 138, 0.26); stroke: #f3d48a; stroke-width: 2; }
+.pcard .act-core { font: bold 16px Georgia, serif; fill: #14202c; }
+.pcard .act-core-lab { font: 9px Georgia, serif; fill: #14202c; }
+.pcard .act-web-note { font-size: 14px; color: #c9b07a; }
+.ph-modal .pcard .act-grid { grid-template-columns: 1fr; }
+.ph-modal .pcard .act-right { border-left: 0; padding-left: 0; }
+
+/* Анкета: «Как самочувствие?» (автор, 29.10) — две большие кнопки; «Всё хорошо» — без вопросов о болезнях */
+.anketa-well { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.anketa-well-btn { appearance: none; cursor: pointer; font-family: var(--font-title); font-weight: 700; font-size: 21px; padding: 22px 12px; border-radius: 8px; color: #efe4cc; border: 1px solid #8a6a3a; background: rgba(42, 29, 18, 0.9); }
+.anketa-well-btn:hover { border-color: var(--gold); }
+.anketa-well-btn.yes { color: #1b120a; border: 0; background: linear-gradient(180deg, #f6c66a, #c9953e); }
+.anketa-well-btn.yes:hover { box-shadow: 0 0 16px rgba(255, 200, 110, 0.55); }
+.anketa-well-btn.on { outline: 2px solid var(--gold); outline-offset: 2px; }
+.anketa-well-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ph-modal .anketa-well { grid-template-columns: 1fr; }

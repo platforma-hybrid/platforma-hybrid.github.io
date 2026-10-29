@@ -1,4 +1,5 @@
-// Анкета входа (автор, 28.10; claude/SPEC_HEALTH.md §2): при первом открытии «Заданий», 6 экранов, всё кнопками, всё можно пропустить.
+// Анкета входа (автор, 28.10; claude/SPEC_HEALTH.md §2): при первом открытии «Заданий», до 7 экранов, всё кнопками, всё можно пропустить.
+// 29.10 (автор): после возраста — «Как самочувствие?»: «Всё хорошо» сразу ведёт к пробе сил, вопросы о болезнях видит только тот, кому есть что учесть.
 // Профиль хранится только в этом браузере (gibrid.health.v1). Ответы о здоровье — только с согласием «Тайна здоровья».
 // Итог отдаётся событием hub:anketa-done — его применяют ежедневные задания (стартовые ступени, «Бережно», 60+, письмо Тренера).
 
@@ -37,7 +38,7 @@ export function isCareful(p) {
 
 /** Стартовые ступени по пробе (SPEC_HEALTH §3.1). Без согласия, с «Бережно» или без пробы — ничего не меняем (кроме «Бережно» — самая лёгкая). */
 export function startSteps(p) {
-  if (!p?.consent) return {};
+  if (!p?.consent && !p?.well) return {};
   if (isCareful(p)) return { pushups: 0, squats: 0 };
   const push = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 }[p.probe?.push];
   const squat = { 0: 0, 1: 1, 2: 2, 3: 3 }[p.probe?.squat];
@@ -54,18 +55,21 @@ export function openAnketa(ctx, { again = false } = {}) {
   p.flags ??= [];
   p.probe ??= {};
   const root = el("div", "anketa");
-  // шаги: 0 кто ты · 1 тайна · 2 семь вопросов · 3 сейчас (жен.) · 4 проба · 5 итог
+  // шаги: 0 кто ты · 1 самочувствие · 2 тайна · 3 семь вопросов · 4 сейчас (жен.) · 5 проба · 6 итог
+  const LAST = 6;
   let step = 0;
   const shows = (i) => {
-    if (i === 2 || i === 4 || i === 3) if (!p.consent) return false;
-    if (i === 3 && p.sex !== "f") return false;
-    if (i === 4 && isCareful(p)) return false;
+    if (p.well && (i === 2 || i === 3 || i === 4)) return false; // «Всё хорошо» — без вопросов о болезнях
+    if (i === 5 && p.well) return true;
+    if (i === 3 || i === 4 || i === 5) if (!p.consent) return false;
+    if (i === 4 && p.sex !== "f") return false;
+    if (i === 5 && isCareful(p)) return false;
     return true;
   };
   const go = (dir) => {
     let i = step + dir;
-    while (i > 0 && i < 5 && !shows(i)) i += dir;
-    step = Math.max(0, Math.min(5, i));
+    while (i > 0 && i < LAST && !shows(i)) i += dir;
+    step = Math.max(0, Math.min(LAST, i));
     draw();
   };
   const chips = (list, value, onPick) => {
@@ -104,7 +108,7 @@ export function openAnketa(ctx, { again = false } = {}) {
       p.parq = Array(7).fill(false);
       p.flags = [];
       p.now = undefined;
-      p.probe = {};
+      if (!p.well) p.probe = {}; // проба сил — не тайна здоровья: у «Всё хорошо» она остаётся
     }
     saveHealth(p);
     document.dispatchEvent(new CustomEvent("hub:anketa-done", { detail: { profile: p, again } }));
@@ -114,7 +118,7 @@ export function openAnketa(ctx, { again = false } = {}) {
   function draw() {
     root.replaceChildren();
     const dots = el("div", "anketa-dots");
-    for (let i = 0; i < 6; i++) if (shows(i) || i === 0 || i === 1 || i === 5) dots.append(el("i", i <= step ? "on" : ""));
+    for (let i = 0; i <= LAST; i++) if (shows(i) || i === 0 || i === 1 || i === LAST) dots.append(el("i", i <= step ? "on" : ""));
     root.append(dots);
     const S = T.screens?.[step] ?? {};
     root.append(el("h2", "anketa-title", S.title ?? ""));
@@ -124,6 +128,20 @@ export function openAnketa(ctx, { again = false } = {}) {
       root.append(el("span", "anketa-lab", T.sexLabel ?? ""), chips(T.sexes ?? [], p.sex, (v) => (p.sex = v)));
       root.append(foot(skip(), next()));
     } else if (step === 1) {
+      const pick = el("div", "anketa-well");
+      pick.append(
+        btn(T.wellYes ?? "", `anketa-well-btn yes${p.well === true ? " on" : ""}`, () => {
+          p.well = true;
+          p.consent = false;
+          go(1);
+        }),
+        btn(T.wellNo ?? "", `anketa-well-btn${p.well === false ? " on" : ""}`, () => {
+          p.well = false;
+          go(1);
+        }),
+      );
+      root.append(pick, el("p", "anketa-honest", T.wellNote ?? ""));
+    } else if (step === 2) {
       const box = el("div", "anketa-secret");
       for (const [k, v] of T.secret ?? []) {
         const row = el("div", "");
@@ -145,7 +163,7 @@ export function openAnketa(ctx, { again = false } = {}) {
           }),
         ),
       );
-    } else if (step === 2) {
+    } else if (step === 3) {
       (T.parq ?? []).forEach((q, i) => {
         const row = el("div", "anketa-q");
         row.append(el("span", "", q), chips([[true, T.yes], [false, T.no]], p.parq[i], (v) => (p.parq[i] = Boolean(v))));
@@ -165,10 +183,10 @@ export function openAnketa(ctx, { again = false } = {}) {
         root.append(box);
       }
       root.append(foot(skip(), next()));
-    } else if (step === 3) {
+    } else if (step === 4) {
       root.append(chips(T.nows ?? [], p.now, (v) => (p.now = v)), el("p", "anketa-honest", T.nowNote ?? ""));
       root.append(foot(skip(), next()));
-    } else if (step === 4) {
+    } else if (step === 5) {
       root.append(el("span", "anketa-lab", T.pushLabel ?? ""), chips(T.push ?? [], p.probe.push, (v) => (p.probe.push = v)));
       root.append(el("span", "anketa-lab", T.squatLabel ?? ""), chips(T.squat ?? [], p.probe.squat, (v) => (p.probe.squat = v)));
       root.append(foot(skip(), next()));
@@ -176,7 +194,7 @@ export function openAnketa(ctx, { again = false } = {}) {
       if (isCareful(p)) root.append(el("p", "anketa-mode", T.careful ?? ""));
       root.append(foot(null, btn(T.done ?? "", "anketa-go", finish)));
     }
-    if (step > 0 && step < 5) {
+    if (step > 0 && step < LAST) {
       const back = btn(T.back ?? "", "anketa-back", () => go(-1));
       root.prepend(back);
     }

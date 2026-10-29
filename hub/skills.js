@@ -152,17 +152,18 @@ export function balanceOf(lib, mastery) {
   return { val, total, newcomer, status, point: { x: px, y: py }, offset, balanced };
 }
 
-/** Интеллект = уровни всех сил + мастерство навыков; в равновесии навыков — бонус. Для письма и окна навыков. */
+/** Интеллект = навыки (автор, 29.10: «интеллект — это навыки, его будет мало, как и Воли»); в равновесии навыков — бонус. Силы в него не входят — они в Стати. */
 export function intellectOf(lib, mastery, flasks) {
   const might = Object.values(flasks ?? {}).reduce((sum, f) => sum + (f.level ?? 0), 0);
   if (!lib?.blocks) return { value: might, might, skills: 0, balanced: false };
   const bal = balanceOf(lib, mastery ?? {});
   const skills = Object.values(bal.val).reduce((a, b) => a + b, 0);
-  const base = might + skills;
+  const base = skills;
   return { value: bal.balanced ? Math.round(base * (1 + lib.rules.balanceBonus)) : base, might, skills, balanced: bal.balanced };
 }
 
 export const masteryNow = () => loadMastery();
+export const careNow = () => loadCare(); // отметки заботы по дням — для графика карточки (29.10)
 
 export function initSkills(ctx, getDailies) {
   const lib = ctx.skills;
@@ -681,7 +682,7 @@ export function initSkills(ctx, getDailies) {
     lastBal = bal;
     const skillsSum = Object.values(bal.val).reduce((a, b) => a + b, 0);
     const might = mightOf();
-    const base = might + skillsSum;
+    const base = skillsSum; // 29.10: Интеллект — от навыков
     const value = bal.balanced ? Math.round(base * (1 + lib.rules.balanceBonus)) : base;
     const parts = fmt(t.parts, { a: might, s: skillsSum }) + (bal.balanced ? fmt(t.bonusOn, { p: Math.round(lib.rules.balanceBonus * 100) }) : fmt(t.bonusOff, { p: Math.round(lib.rules.balanceBonus * 100) }));
     intel.replaceChildren(el("span", "sk-intel-name", t.intellect), el("b", "sk-intel-num", String(value)));

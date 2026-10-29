@@ -11,6 +11,7 @@ import { initPhone } from "./phone.js";
 import { addPoints, convertFlask, fractionalLevel, levelNeed, migrateFlask } from "./levels.js";
 import { dayNum as dayNumOf, stepDown, stepStatus, stepUp } from "./steps.js";
 import { initWallet } from "./wallet.js";
+import { initCard } from "./card.js";
 import { needAnketa, openAnketa, openHealth, startSteps } from "./anketa.js";
 import { fill as fillMail, initMail, periodSummaries, postMail } from "./mail.js";
 
@@ -647,6 +648,8 @@ function createDailies(box, ctx) {
   const L = t.library ?? {};
   const pick = { min: data.pick?.min ?? 6, max: data.pick?.max ?? 10 };
   const allTasks = data.groups.flatMap((g) => g.tasks).filter((task) => task.attr && task.attr !== "dev");
+  // задание → сила, и для снятых заданий (график карточки, 29.10)
+  const attrMap = Object.fromEntries([...(data.retired ?? []), ...data.groups.flatMap((g) => g.tasks)].filter((x) => x.attr).map((x) => [x.id, x.attr]));
   const byId = Object.fromEntries(allTasks.map((task) => [task.id, task]));
   // открытия (27.10, SPEC_PROGRAMS §10): старт с малого, следующее дело дорожки мир открывает сам
   const O = data.open ?? null;
@@ -678,6 +681,7 @@ function createDailies(box, ctx) {
       const attr = byId[next].attr;
       if ((state.flasks[attr]?.level ?? 0) < needLevel(next)) continue;
       state.open = [...state.open, next];
+      state.openedAt = { ...(state.openedAt ?? {}), [next]: state.day }; // для значков на графике карточки (29.10)
       if (!state.picked.includes(next) && state.picked.length < (data.pick?.max ?? 10)) state.picked = [...state.picked, next];
       const M = ctx.texts.mail ?? {};
       const task = byId[next];
@@ -1387,7 +1391,7 @@ function createDailies(box, ctx) {
     }
     buildWeak();
     buildYday();
-    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks, wallet: state.wallet, stored: state.stored ?? 0, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], steps: { ...(state.steps ?? {}) } };
+    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks, wallet: state.wallet, stored: state.stored ?? 0, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], steps: { ...(state.steps ?? {}) }, willBonus: state.willBonus ?? 0, openedAt: { ...(state.openedAt ?? {}) }, attrOf: attrMap, allTasks };
     document.dispatchEvent(new CustomEvent("hub:dailies", { detail: lastDailies }));
     board.classList.toggle("closed", state.closed);
     submit.disabled = state.closed;
@@ -1691,6 +1695,7 @@ function handleAction(action, ctx) {
   if (action === "achievements") return ctx.achievementsUi?.open();
   if (action === "stats") return ctx.statsUi?.open();
   if (action === "skills") return ctx.skillsUi?.open();
+  if (action === "modal:character") return ctx.cardUi?.open(); // полная карточка персонажа (29.10)
   if (action.startsWith("kolo-month:")) {
     const month = Number(action.split(":")[1]);
     if (!lastDailies) return;
@@ -1770,6 +1775,7 @@ async function main() {
   ctx.achievementsUi = initAchievements(ctx, () => lastDailies);
   ctx.statsUi = initStats(ctx, () => lastDailies);
   ctx.skillsUi = initSkills(ctx, () => lastDailies);
+  ctx.cardUi = initCard(ctx, () => lastDailies);
   bindActions(ctx);
 
   fitStage(stage, layout);
