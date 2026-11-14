@@ -68,7 +68,7 @@ function dailyDays(d) {
     const attr = d.tasks.find((t) => t.id === id)?.attr;
     if (attr) attrs[attr] = (attrs[attr] ?? 0) + 1;
   }
-  days.push({ day: d.day, done: d.done, attrs, closedBy: d.closed ? "player" : null, kolo: koloDate() });
+  days.push({ day: d.day, done: d.done, attrs, gains: d.dayGains, closedBy: d.closed ? "player" : null, kolo: koloDate() });
   return days;
 }
 
@@ -110,31 +110,44 @@ export function initQuests(ctx, getDailies) {
   let openNode = null;
 
   function compute() {
-    const days = dailyDays(getDailies());
+    const daily = getDailies();
+    const days = dailyDays(daily);
     const { now } = periodKeys();
     const out = {};
     for (const kind of ["week", "month"]) {
       const tasks = lib[kind].tasks.filter((x) => x.attr !== "dev");
       const rows = lib[kind].tasks.map((task) => ({ task, ...progressOf(task, kind, days, state[kind].manual, now) }));
       const done = rows.filter((r) => r.task.attr !== "dev" && r.cur >= r.target).length;
-      out[kind] = { rows, done, total: tasks.length };
+      const earned = days
+        .filter((day) => day.closedBy && inPeriod(kind, day.kolo, now))
+        .reduce((sum, day) => sum + (day.gains
+          ? Object.values(day.gains).reduce((total, amount) => total + amount, 0)
+          : (day.done ?? 0) * (daily?.reward ?? 5)), 0);
+      out[kind] = { rows, done, total: tasks.length, earned };
     }
     return out;
   }
 
-  // бонус — только когда закрыто всё; если отметку сняли — бонус возвращается
+  // Сумма бонуса следует за опытом закрытых дней периода. Старые выплаченные награды сохраняем.
   function settleBonus(p) {
+    const changes = [];
     for (const kind of ["week", "month"]) {
+      const current = state[kind];
+      const bonus = lib[kind].bonus;
       const all = p[kind].done === p[kind].total;
-      if (all && !state[kind].bonusGiven) {
-        state[kind].bonusGiven = true;
-        document.dispatchEvent(new CustomEvent("hub:add-exp", { detail: { amount: lib[kind].bonus.exp, reason: t.bonusToast[kind] } }));
-      } else if (!all && state[kind].bonusGiven) {
-        state[kind].bonusGiven = false;
-        document.dispatchEvent(new CustomEvent("hub:add-exp", { detail: { amount: -lib[kind].bonus.exp, reason: t.bonusBack } }));
+      if (current.bonusGiven && current.bonusAmount === undefined) {
+        current.legacyBonus = true;
+        current.bonusAmount = bonus.legacyExp;
       }
+      const target = all ? (current.legacyBonus ? bonus.legacyExp : Math.round(p[kind].earned * bonus.percent / 100)) : 0;
+      const amount = target - (current.bonusAmount ?? 0);
+      current.bonusGiven = all;
+      current.bonusAmount = target;
+      if (!all) current.legacyBonus = false;
+      if (amount) changes.push({ amount, reason: amount > 0 ? t.bonusToast[kind] : t.bonusBack });
     }
     save(state);
+    for (const detail of changes) document.dispatchEvent(new CustomEvent("hub:add-exp", { detail }));
   }
 
   function refresh() {
@@ -146,14 +159,22 @@ export function initQuests(ctx, getDailies) {
     const full = (kind) =>
       (state.history ?? []).filter((h) => h.kind === kind && h.bonus && h.key.startsWith(year)).length + (state[kind].bonusGiven ? 1 : 0);
     document.dispatchEvent(new CustomEvent("hub:quests", { detail: { weekDone: p.week.done, weekTotal: p.week.total, monthDone: p.month.done, monthTotal: p.month.total, fullWeeks: full("week"), fullMonths: full("month") } }));
-    if (openNode?.isConnected) render(openNode, p);
+    if (openNode?.isConnected && tab === "day" && openNode.classList.contains("qb-day")) {
+      const counts = { day: dayCount(), week: `${p.week.done}/${p.week.total}`, month: `${p.month.done}/${p.month.total}` };
+      for (const button of openNode.querySelectorAll(".qb-tab")) {
+        button.textContent = t.tabs[button.dataset.kind];
+        button.setAttribute("aria-label", `${button.textContent} · ${counts[button.dataset.kind]}`);
+      }
+    } else if (openNode?.isConnected) render(openNode, p);
   }
 
   // 17.10 (автор): день, неделя и месяц — одно окно на одном фоне. Вкладка «День» — та же доска ежедневок из хаба (hub.js),
   // она на время переезжает сюда и возвращается на место, когда окно закрыли или выбрали другую вкладку.
   let boardHome = null;
+  let dayBoard = null;
   function dailiesBoard() {
-    return document.querySelector(".dailies-board");
+    dayBoard ??= document.querySelector(".dailies-board");
+    return dayBoard;
   }
   function returnBoard() {
     const board = dailiesBoard();
@@ -173,13 +194,18 @@ export function initQuests(ctx, getDailies) {
     returnBoard();
     node.replaceChildren();
     node.classList.toggle("qb-day", tab === "day");
+    node.closest(".modal-quests")?.classList.toggle("modal-quests-day", tab === "day");
     const top = el("div", "qb-top");
     const tabs = el("div", "qb-tabs");
     for (const kind of ["day", "week", "month"]) {
       const count = kind === "day" ? dayCount() : `${p[kind].done}/${p[kind].total}`;
-      const b = el("button", `qb-tab${tab === kind ? " on" : ""}`, count ? `${t.tabs[kind]} · ${count}` : t.tabs[kind]);
+      const label = count ? `${t.tabs[kind]} · ${count}` : t.tabs[kind];
+      const b = el("button", `qb-tab${tab === kind ? " on" : ""}`, tab === "day" ? t.tabs[kind] : label);
       b.type = "button";
+      b.dataset.kind = kind;
+      b.setAttribute("aria-label", label);
       b.addEventListener("click", () => {
+        if (tab === kind) return;
         tab = kind;
         render(node);
       });
@@ -234,13 +260,12 @@ export function initQuests(ctx, getDailies) {
       }
       list.append(row);
     }
-    list.append(el("div", "dailies-add", t.addOwn));
     node.append(list);
 
     const bonus = el("div", `qb-bonus${state[tab].bonusGiven ? " got" : ""}`);
-    bonus.append(el("span", "", t.bonusLabel[tab]), el("b", "", state[tab].bonusGiven ? t.bonusGot : lib[tab].bonus.text));
+    bonus.append(el("span", "", t.bonusLabel[tab]), el("b", "", state[tab].bonusGiven ? `${t.bonusGot} · ${state[tab].bonusAmount}` : lib[tab].bonus.text), el("small", "qb-bonus-note", t.bonusNote));
     node.append(bonus);
-    node.append(el("p", "qb-hint", t.hint));
+    node.append(el("h3", "qb-period-title", t.periodTitle[tab]));
   }
 
   document.addEventListener("hub:dailies", refresh);
@@ -255,7 +280,7 @@ export function initQuests(ctx, getDailies) {
     openNode = el("div", "quests-board");
     render(openNode);
     // 17.10: живописный фон от ChatGPT (доска путника) — живое лежит на нарисованных табличках и строках
-    ctx.modal.showNode(t.title, openNode, "modal-art modal-quests");
+    ctx.modal.showNode(t.title, openNode, tab === "day" ? "modal-art modal-quests modal-quests-day" : "modal-art modal-quests");
   }
 
   return {

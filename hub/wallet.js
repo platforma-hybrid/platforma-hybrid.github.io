@@ -16,6 +16,21 @@ const dayNum = (key) => {
 };
 const sign = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "0");
 
+export function dayNet(day) {
+  const earned = Object.values(day.dayGains ?? {}).reduce((sum, gain) => sum + gain, 0);
+  return earned - (day.bought ?? []).reduce((sum, item) => sum + item.price, 0);
+}
+
+// Положительный остаток ждёт сдачи дня. Траты сверх заработанного покрывает текущий кошелёк.
+export function settleDayWallet(state, day, close = false) {
+  const paid = day.walletPaid ?? 0;
+  const delta = dayNet(day) - paid;
+  if (!close && delta >= 0) return;
+  const applied = Math.max(-state.wallet, delta);
+  state.wallet += applied;
+  day.walletPaid = paid + applied;
+}
+
 /**
  * Строки одного дня — по источникам, без разжёвывания (автор, 27.10: «просто за ежедневки… а то утонем»):
  * «Ежедневные задания +13», «Слабости −15»; позже — «Квесты», «Продажи» (rec.income = { quests: 20, sales: 40 }).

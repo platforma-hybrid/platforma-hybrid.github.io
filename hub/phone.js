@@ -166,6 +166,8 @@ export function initPhone(ctx, { refit }) {
   function fitArt() {
     const z = Math.min(window.innerWidth / 1536, window.innerHeight / 1024);
     document.documentElement.style.setProperty("--ph-art-zoom", String(z));
+    const dayZoom = Math.min(window.innerWidth / 1448, window.innerHeight / 1086);
+    document.documentElement.style.setProperty("--ph-quests-day-zoom", String(dayZoom));
     document.documentElement.classList.toggle("ph-art-small", z < 0.5);
   }
   window.addEventListener("resize", fitArt);

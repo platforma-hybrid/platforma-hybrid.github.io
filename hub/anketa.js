@@ -204,14 +204,26 @@ export function openAnketa(ctx, { again = false } = {}) {
   ctx.modal.showNode(T.title ?? "", root, "modal-anketa");
 }
 
-/** «Моё здоровье»: пройти заново или стереть. */
-export function openHealth(ctx) {
+/** Настройки анкеты и бережный режим текущего дня. */
+export function openHealth(ctx, today) {
   const T = ctx.texts.anketa ?? ctx.texts.dailies?.anketa ?? {};
   const p = loadHealth();
-  const root = el("div", "anketa");
+  const root = el("div", "anketa health-overview");
   root.append(el("h2", "anketa-title", T.mineTitle ?? ""));
-  root.append(el("p", "anketa-text", p?.consent ? T.mineHas ?? "" : T.mineNone ?? ""));
-  const again = el("button", "anketa-go", T.again ?? "");
+  if (today) {
+    const mode = el("p", "anketa-mode");
+    mode.append(el("span", "", T.healthMode), el("strong", "", today.careful ? T.healthCareful : T.healthStandard));
+    const gentle = el("button", "anketa-go", today.active ? T.gentleActive : T.gentleEnable);
+    gentle.type = "button";
+    gentle.disabled = today.active || today.closed;
+    gentle.addEventListener("click", () => {
+      today.activate();
+      gentle.textContent = T.gentleActive;
+      gentle.disabled = true;
+    });
+    root.append(mode, el("h3", "health-gentle-title", T.gentleTitle), el("p", "anketa-text", T.gentleHint), gentle);
+  }
+  const again = el("button", "anketa-alt", T.again ?? "");
   again.type = "button";
   again.addEventListener("click", () => openAnketa(ctx, { again: true }));
   const wipe = el("button", "anketa-alt", T.wipe ?? "");
@@ -224,7 +236,10 @@ export function openHealth(ctx) {
     wipe.disabled = true;
   });
   const f = el("div", "anketa-foot");
-  f.append(wipe, again);
-  root.append(f);
-  ctx.modal.showNode(T.title ?? "", root, "modal-anketa");
+  const back = el("button", "anketa-alt", T.healthBack);
+  back.type = "button";
+  back.addEventListener("click", () => ctx.questsUi.open("day"));
+  f.append(back, wipe);
+  root.append(again, el("p", "anketa-text", p?.consent ? T.mineHas ?? "" : T.mineNone ?? ""), f);
+  ctx.modal.showNode(T.mineTitle ?? "", root, "modal-anketa modal-health-overview");
 }

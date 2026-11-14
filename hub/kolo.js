@@ -434,11 +434,19 @@ export function createKolo(box, { texts, character, getDailies, actionButton, ic
         color = "#ffd27a";
       } else if (w < now.week) {
         let sum = 0;
-        for (let day = from; day <= to; day++) sum += SCORE[gradeDay(recOf(days, now, now.month, day), total)] ?? 0;
-        const avg = sum / (to - from + 1);
-        const g = avg >= 1.7 ? "green" : avg >= 1 ? "yellow" : "red";
-        fill = DAY_COLORS[g] + "b0";
-        color = "#1a1208";
+        let recorded = false;
+        for (let day = from; day <= to; day++) {
+          const grade = gradeDay(recOf(days, now, now.month, day), total);
+          if (grade === null) continue;
+          recorded = true;
+          sum += SCORE[grade] ?? 0;
+        }
+        if (recorded) {
+          const avg = sum / (to - from + 1);
+          const g = avg >= 1.7 ? "green" : avg >= 1 ? "yellow" : "red";
+          fill = DAY_COLORS[g] + "b0";
+          color = "#1a1208";
+        }
       }
       const label = now.short ? t.shortWeek : fmt(t.weekRing, { w: ROMAN[w - 1] });
       const mid = weeks > 1 ? (d0 + d1) / 2 : 180;

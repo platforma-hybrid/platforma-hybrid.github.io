@@ -1,0 +1,477 @@
+.dailies-mine { display: block; }
+
+.daily-card-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  padding: 8px 4px;
+}
+
+.daily-card {
+  position: relative;
+  color: #f0d89a;
+  background: #130e08 url("/assets/hub/ui/quests/daily-card-frame.jpg") center / 103% 103% no-repeat;
+  border: 1px solid #7b5428;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px #0009;
+}
+
+.daily-card[data-rarity="uncommon"] { --rarity: #81ba4b; }
+.daily-card[data-rarity="rare"] { --rarity: #73b3e9; }
+.daily-card:is([data-rarity="uncommon"], [data-rarity="rare"])::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 11px;
+  box-shadow: inset 0 0 3px var(--rarity), 0 0 8px var(--rarity);
+  opacity: .65;
+  pointer-events: none;
+}
+
+.daily-card-summary {
+  box-sizing: border-box;
+  min-height: 302px;
+  padding: 18px 8px 14px;
+  display: grid;
+  grid-template-rows: 122px 48px 20px 1fr 42px;
+  align-items: center;
+  justify-items: center;
+  text-align: center;
+}
+.daily-card-icon {
+  display: block;
+  flex: none;
+  width: 116px;
+  height: 116px;
+  background: url("/assets/hub/ui/quests/daily-card-emblems.jpg") var(--icon-x, 0%) 0 / 600% 100% no-repeat;
+  mask-image: radial-gradient(circle, #000 63%, transparent 73%);
+}
+.daily-card-icon-endurance { --icon-x: 20%; }
+.daily-card-icon-agility { --icon-x: 40%; }
+.daily-card-icon-calm { --icon-x: 60%; }
+.daily-card-icon-morality { --icon-x: 80%; }
+.daily-card-icon-order { --icon-x: 100%; }
+.daily-card-summary h3 {
+  display: grid;
+  place-content: center;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-bottom: 1px solid #9f763b80;
+  font: 700 18px/1.1 var(--font-title);
+  letter-spacing: .02em;
+}
+.daily-card-rarity { font: italic 15px var(--font-text); color: var(--rarity, #bda985); }
+.daily-card-status { font-size: 17px; line-height: 1.1; }
+.daily-card-summary button { width: 100%; max-width: 142px; }
+.daily-card-summary:has(button:disabled) { opacity: .72; }
+
+.daily-card-path {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 18px;
+  padding: 9px 19px;
+  margin: 14px 4px 0;
+  border: 1px solid #9f763b;
+  background: #120f0ce8;
+  color: #edd295;
+}
+.daily-card-path strong { font: 700 22px var(--font-title); }
+.daily-card-path-entry { display: grid; gap: 5px; text-align: center; border-left: 1px solid #795b35; padding-left: 18px; }
+.daily-card-path-entry progress { width: 100%; height: 8px; accent-color: #cb963f; }
+
+.daily-card-overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #0b0806b8;
+}
+.daily-card-overlay[hidden],
+.daily-card-overlay [hidden] { display: none; }
+.daily-card-detail {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(100%, 540px);
+  height: min(760px, 100%);
+  padding: 28px 34px 25px;
+  text-align: center;
+  box-shadow: 0 12px 60px #000d;
+}
+.daily-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+  padding: 0 0 15px;
+  border-bottom: 1px solid #997645;
+  font: 700 30px var(--font-title);
+}
+.daily-card-title .daily-card-icon { width: 62px; height: 62px; }
+.daily-card-front { flex: 1; display: grid; align-content: center; justify-items: center; gap: 28px; }
+.daily-card-front .daily-card-icon { width: 238px; height: 238px; }
+.daily-card-front .daily-card-invitation { margin: 0; color: #f1d9a5; font: italic 33px var(--font-text); }
+.daily-card-rows { flex: 1; overflow-y: auto; margin: 6px 0; scrollbar-color: #a8793a transparent; }
+.daily-card-task-list .dailies-task { padding: 12px 4px; border-bottom: 1px solid #7652247a; text-align: left; }
+.daily-card-task-list .dailies-task:not(.dailies-sets) { min-height: 58px; }
+.daily-card-task-list .dailies-sets { display: flex; flex-wrap: wrap; gap: 10px; }
+.daily-card-task-list .dailies-sets .dailies-task-name { flex: 1 0 100%; }
+.daily-card-task-list .dailies-pts,
+.daily-card-task-list .dailies-tag { display: none; }
+.daily-card-task-list .dailies-sets.ui-roman .dailies-dot { min-width: 52px; min-height: 40px; font-size: 20px; }
+.daily-card-reward {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 14px;
+  padding-top: 14px;
+  border-top: 1px solid #997645;
+  font-size: 20px;
+}
+.daily-card-score { color: #ffdb8a; font: 700 42px/1 var(--font-title); font-variant-numeric: tabular-nums; }
+.daily-card-back { align-self: center; }
+
+.modal-quests .in-quests .dailies-top { justify-content: space-between; }
+.modal-quests .in-quests .dailies-health-shortcut {
+  position: absolute;
+  top: 35px;
+  right: 118px;
+  background: #17140fe8;
+}
+.modal-quests .in-quests > .dailies-yday-btn {
+  position: absolute;
+  right: 382px;
+  top: 220px;
+}
+.modal-quests .in-quests .dailies-mine { overflow: visible; }
+.modal-quests .in-quests .daily-card-task-list .dailies-task { padding: 12px 4px; }
+.modal-quests .in-quests .daily-card-task-list .dailies-task-name { white-space: normal; overflow: visible; }
+.modal-quests .in-quests .daily-card-task-list .dailies-sets.ui-roman .dailies-dot { min-width: 52px; padding: 4px 8px; }
+
+.daily-card-wallet-result {
+  display: grid;
+  min-width: 0;
+  color: #dec18d;
+  text-align: center;
+  white-space: nowrap;
+  font: 16px/1.15 var(--font-text);
+}
+.daily-card-wallet-result strong { color: #f3ce77; font: 700 23px var(--font-title); }
+.daily-card-wallet-result[hidden] { display: none; }
+.modal-quests .in-quests .dailies-foot { left: 856px; width: 382px; gap: 20px; justify-content: flex-end; }
+.modal-quests .in-quests .dailies-yellow { width: 550px; }
+.modal-quests .in-quests.yday-open .dailies-foot,
+.modal-quests .in-quests.yday-open .dailies-yellow { visibility: hidden; }
+.daily-weak-symbol { color: #d8b06f; filter: grayscale(1) sepia(1); font-size: 20px; }
+.modal-quests .in-quests.weak-open .dailies-foot { visibility: visible; }
+.modal-quests .in-quests.weak-open .dailies-foot :is(.dailies-stamp, .dailies-submit) { display: none; }
+.modal-quests .in-quests .dailies-weak-grid { grid-template-columns: 1fr; gap: 5px; }
+.modal-quests .in-quests .dailies-weak-card { display: grid; grid-template-columns: minmax(250px, 1fr) minmax(0, 2fr); align-items: center; padding: 6px 12px; }
+.dailies-weak-top { justify-content: flex-start; }
+.daily-weak-label { display: grid; gap: 1px; }
+
+.dailies-lib .daily-library-catalog {
+  display: grid;
+  grid-template-columns: minmax(185px, 1fr) minmax(0, 3fr);
+  gap: 14px;
+}
+.daily-library-nav { display: flex; flex-direction: column; gap: 5px; }
+.daily-library-nav .dailies-lib-btn { text-align: left; }
+.daily-library-catalog [aria-pressed="true"] { background-color: #593d1f; color: #fff0c6; }
+.daily-library-controls { display: flex; align-items: center; gap: 12px; margin: 8px 0 12px; }
+.daily-library-search {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid #a47a41;
+  border-radius: 5px;
+  background: #1b130c;
+  color: #eedbb1;
+  font: inherit;
+}
+.dailies-lib-row[hidden] { display: none; }
+.dailies-yday .dailies-yday-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dailies-yday-set { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 0; font-size: 18px; }
+.yday-set {
+  min-width: 34px;
+  padding: 3px 5px;
+  background: #1b140d;
+  border: 1px solid #98713a;
+  border-radius: 3px;
+  color: #edcf91;
+  font: inherit;
+}
+.yday-set.on { background: #5e3c16; }
+.yday-set:disabled:not(.on) { opacity: .55; }
+
+.modal-quests .qb-period-title {
+  position: absolute;
+  top: 310px;
+  left: 218px;
+  width: 1100px;
+  margin: 0;
+  text-align: center;
+  font: 700 29px var(--font-title);
+  color: #edcf91;
+}
+.modal-quests .qb-bonus { padding-bottom: 18px; }
+.qb-bonus-note {
+  position: absolute;
+  inset: auto 0 9px;
+  text-align: center;
+  font: 16px var(--font-text);
+  color: #bda581;
+}
+
+.wood.modal.modal-health-overview {
+  width: 880px;
+  box-sizing: border-box;
+  padding: 116px 164px 105px;
+  background-image: url("/assets/hub/ui/quests/daily-health.jpg");
+  background-position: center;
+  background-size: 100% 100%;
+  border: 0;
+}
+.health-overview { text-align: center; gap: 14px; }
+.health-overview .anketa-mode { display: flex; justify-content: space-between; gap: 12px; }
+.health-gentle-title { margin: 10px 0 0; font: 700 27px var(--font-title); color: #ead39c; }
+.health-overview > .anketa-go, .health-overview > .anketa-alt { align-self: center; }
+.health-overview .anketa-go:disabled { opacity: .62; cursor: default; }
+
+@media (max-width: 620px) {
+  .daily-card-summary h3 { font-size: 17px; }
+  .daily-card-detail { width: min(100%, 560px); }
+  .wood.modal.modal-health-overview {
+    padding: 44px 30px;
+    background-image: linear-gradient(#110e0bd9, #110e0bc9), url("/assets/hub/ui/quests/daily-health.jpg");
+  }
+}
+
+/* Позиции окна «День» сняты с утверждённого макета 1448 × 1086. */
+.wood.modal.modal-art.modal-quests-day {
+  width: 1448px;
+  height: 1086px;
+  background-image: url("/assets/hub/ui/quests/daily-shell.jpg");
+  zoom: .72;
+}
+.ph-modal .wood.modal.modal-art.modal-quests-day { zoom: var(--ph-quests-day-zoom, .5); }
+.wood.modal.modal-quests-day::before,
+.wood.modal.modal-quests-day::after { display: none; }
+.modal-quests-day #modal-title {
+  left: 474px;
+  top: 29px;
+  width: 500px;
+  height: 78px;
+  opacity: 0;
+  pointer-events: none;
+}
+.wood.modal-quests-day .modal-close,
+.ph-modal .wood.modal-quests-day .modal-close {
+  left: 1325px;
+  top: 29px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+}
+.wood.modal-quests-day .modal-close,
+.modal-quests-day .in-quests .dailies-health-shortcut,
+.modal-quests-day .qb-tab,
+.modal-quests-day .qb-tab.on {
+  color: transparent;
+  text-shadow: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.modal-quests-day .qb-tab,
+.modal-quests-day .qb-tab.on { top: 208px; width: 157px; height: 56px; }
+.modal-quests-day .qb-tab:nth-child(1) { left: 148px; }
+.modal-quests-day .qb-tab:nth-child(2) { left: 313px; }
+.modal-quests-day .qb-tab:nth-child(3) { left: 476px; }
+.modal-quests-day .qb-term { left: 1085px; top: 213px; width: 231px; height: 49px; }
+.modal-quests-day .qb-term b { font: 400 23px var(--font-text); color: #f4d494; }
+
+.modal-quests-day .dailies-board.in-quests { width: 1448px; height: 1086px; }
+/* Чистые участки леса и камня из существующих фонов. Кнопки поверх них рисует интерфейс. */
+.modal-quests-day .in-quests::before,
+.modal-quests-day .in-quests::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.modal-quests-day .in-quests::before {
+  left: 872px;
+  top: 196px;
+  width: 213px;
+  height: 75px;
+  background: url("/assets/hub/ui/quests/bg_quests.jpg") -944px -197px no-repeat;
+  mask-image: linear-gradient(to right, transparent, #000 26px, #000 calc(100% - 12px), transparent),
+    linear-gradient(to bottom, transparent, #000 21px, #000 calc(100% - 12px), transparent);
+  mask-composite: intersect;
+}
+.modal-quests-day .in-quests::after {
+  left: 978px;
+  top: 885px;
+  width: 212px;
+  height: 59px;
+  background: url("/assets/hub/ui/quests/daily-shell.jpg") -740px -885px no-repeat;
+  mask-image: linear-gradient(to right, transparent, #000 5px, #000 calc(100% - 5px), transparent),
+    linear-gradient(to bottom, transparent, #000 5px, #000 calc(100% - 5px), transparent);
+  mask-composite: intersect;
+}
+.modal-quests-day .in-quests .dailies-health-shortcut { left: 1039px; right: auto; top: 47px; width: 229px; height: 45px; }
+.modal-quests-day .in-quests > .dailies-yday-btn {
+  left: 900px;
+  right: auto;
+  top: 217px;
+  width: 173px;
+  height: 41px;
+  padding: 0 5px 0 31px;
+  border: 0;
+  color: #f3d495;
+  font: 400 19px var(--font-text);
+  background: url("/assets/hub/ui/quests/daily-yesterday.jpg") center / 100% 100% no-repeat;
+  animation: none;
+}
+.modal-quests-day .in-quests > .dailies-yday-btn.on { padding-left: 12px; background: #1c1710; border: 1px solid #a78149; }
+.modal-quests-day .in-quests .dailies-top { left: 174px; top: 298px; width: 1078px; height: 52px; }
+.modal-quests-day .in-quests .dailies-wallet {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font: 400 24px var(--font-text);
+  color: #efd298;
+}
+.modal-quests-day .in-quests .dailies-wallet b { color: #edb24f; font: 400 36px var(--font-text); }
+.modal-quests-day .in-quests .dailies-top .dailies-lib-btn {
+  width: 220px;
+  height: 39px;
+  font: 400 19px var(--font-text);
+  border: 1px solid #d1ab69;
+  background: #2e2316;
+}
+.modal-quests-day .in-quests .dailies-cols { left: 173px; top: 366px; width: 1110px; height: 466px; }
+.modal-quests-day .in-quests .dailies-mine { max-height: none; }
+.modal-quests-day .daily-card-grid {
+  grid-template-columns: 181px 10px 176px 10px 175px 9px 178px 8px 175px 11px 176px;
+  gap: 0;
+  padding: 0;
+}
+.modal-quests-day .daily-card-summary:nth-child(2) { grid-column: 3; }
+.modal-quests-day .daily-card-summary:nth-child(3) { grid-column: 5; }
+.modal-quests-day .daily-card-summary:nth-child(4) { grid-column: 7; }
+.modal-quests-day .daily-card-summary:nth-child(5) { grid-column: 9; }
+.modal-quests-day .daily-card-summary:nth-child(6) { grid-column: 11; }
+.modal-quests-day .daily-card-summary {
+  display: block;
+  height: 344px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: url("/assets/hub/ui/quests/daily-card-deck.png") var(--face-position) 0 / 600% 100% no-repeat;
+  box-shadow: none;
+}
+.modal-quests-day .daily-card-summary:is([data-rarity="uncommon"], [data-rarity="rare"])::after {
+  inset: 5px 6px 7px;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--rarity), inset 0 0 4px var(--rarity);
+  opacity: .65;
+}
+.modal-quests-day .daily-card-summary h3 {
+  position: absolute;
+  top: 178px;
+  height: 33px;
+  opacity: 0;
+  pointer-events: none;
+}
+.modal-quests-day .daily-card-summary :is(.daily-card-rarity, .daily-card-status) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  line-height: 1.2;
+}
+.modal-quests-day .daily-card-rarity { top: 228px; font: 400 19px/1.2 var(--font-text); color: var(--rarity, #efd292); }
+.modal-quests-day .daily-card-status { top: 262px; font: 400 20px/1.2 var(--font-text); }
+.modal-quests-day .daily-card-summary button {
+  position: absolute;
+  top: 294px;
+  left: 12%;
+  width: 76%;
+  height: 23px;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font: 400 20px var(--font-text);
+}
+.modal-quests-day .daily-card-summary button:hover:not(:disabled) { color: #fff2c9; text-shadow: 0 0 8px #e6a545; }
+.modal-quests-day .daily-card-path {
+  grid-template-columns: 312px repeat(3, minmax(0, 1fr));
+  width: 1102px;
+  height: 92px;
+  box-sizing: border-box;
+  gap: 0;
+  padding: 0;
+  margin: 28px 0 0;
+  border: 0;
+  background: url("/assets/hub/ui/quests/daily-path.jpg") center / 100% 100% no-repeat;
+}
+.modal-quests-day .daily-card-path > strong { opacity: 0; }
+.modal-quests-day .daily-card-path-entry {
+  justify-items: center;
+  padding: 0;
+  gap: 10px;
+  border-color: #80613b80;
+  font: 400 22px/1.12 var(--font-text);
+}
+.modal-quests-day .daily-card-path-entry:nth-child(2) { border: 0; }
+.modal-quests-day .daily-card-path-entry progress {
+  appearance: none;
+  width: 72%;
+  height: 14px;
+  border: 1px solid #9a7138;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #100b06;
+}
+.modal-quests-day .daily-card-path-entry progress::-webkit-progress-bar { background: #100b06; }
+.modal-quests-day .daily-card-path-entry progress::-webkit-progress-value { background: linear-gradient(#fbe4a6, #b4711e); border-radius: 8px; }
+.modal-quests-day .in-quests .dailies-yellow { left: 275px; top: 891px; width: 396px; height: 47px; padding: 0; justify-content: flex-end; }
+.modal-quests-day .in-quests .dailies-yellow h3,
+.modal-quests-day .in-quests .dailies-weak-sum { display: none; }
+.modal-quests-day .in-quests .dailies-weak-btn { width: 223px; height: 38px; font: 400 21px var(--font-text); }
+.modal-quests-day .in-quests .dailies-foot { z-index: 1; left: 730px; top: 884px; width: 455px; height: 60px; justify-content: space-between; gap: 0; }
+.modal-quests-day .daily-card-wallet-result { width: 235px; font: 400 20px/1.1 var(--font-text); }
+.modal-quests-day .daily-card-wallet-result strong { font: 400 27px/1.1 var(--font-text); }
+.modal-quests-day .in-quests .dailies-foot .dailies-submit {
+  width: 202px;
+  height: 49px;
+  border-radius: 5px;
+  font: 400 24px var(--font-text);
+}
+.modal-quests-day .in-quests .dailies-admin { left: 195px; top: 985px; gap: 18px; }
+.modal-quests-day .dailies-admin-label { color: #dfc099; font: 400 19px var(--font-text); letter-spacing: normal; text-transform: none; }
+.modal-quests-day .dailies-admin-btn { padding: 7px 16px; border-width: 1px; border-radius: 4px; font: 400 20px var(--font-text); }
+.modal-quests-day .dailies-admin-btn:first-of-type { border-color: transparent; background: transparent; color: #dfc099; }
+.modal-quests-day .daily-card-detail { width: 472px; height: 708px; padding: 42px 50px 29px; border: 0; }
+.modal-quests-day .daily-card-detail[data-power="strength"][data-side="front"] {
+  background-image: url("/assets/hub/ui/quests/daily-card-front.jpg");
+}
+.modal-quests-day .daily-card-detail[data-side="front"] .daily-card-title { order: 1; border: 0; padding: 0; font-size: 47px; }
+.modal-quests-day .daily-card-title:focus { outline: none; }
+.modal-quests-day .daily-card-detail[data-side="front"] .daily-card-front { display: contents; }
+.modal-quests-day .daily-card-front-emblem { order: 0; display: grid; place-content: center; height: 278px; }
+.modal-quests-day .daily-card-invitation { order: 2; margin-top: 16px; }
+.modal-quests-day .daily-card-detail[data-side="front"] .dailies-submit { order: 3; align-self: center; margin-top: 70px; }
+.modal-quests-day .daily-card-detail[data-side="front"] .daily-card-back { order: 4; margin-top: 14px; }
+.modal-quests-day .daily-card-detail[data-side="back"] .daily-card-rows { flex: 0 1 auto; max-height: 386px; }
+.modal-quests-day .daily-card-detail[data-side="back"] .daily-card-reward { margin: auto 0 18px; border: 0; }
+.modal-quests-day .daily-card-score { font-size: 46px; }

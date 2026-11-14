@@ -11,6 +11,16 @@ const REAL = "gibrid.admin.real";
 const UNDO = "gibrid.admin.undo";
 const FOLD = "gibrid.admin.fold";
 const UNDO_MAX = 40;
+const KEEP_ON_RESET = new Set(["gibrid.admin.on", FOLD, "gibrid.dataEpoch"]);
+
+export function resetAllProgress(storage = window.localStorage) {
+  const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
+  for (const key of keys) {
+    if (key && (key.startsWith("gibrid.") || key === "hub.tour.v1") && !KEEP_ON_RESET.has(key)) {
+      storage.removeItem(key);
+    }
+  }
+}
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -297,22 +307,18 @@ export function startAdmin(ctx) {
         }, 4000);
         return;
       }
-      onDo();
+      try {
+        onDo();
+      } catch {
+        b.textContent = t.resetFailed;
+        return;
+      }
       window.location.reload();
     }, "adm-wide");
     return b;
   };
-  const KEEP = new Set(["gibrid.admin.on", "gibrid.admin.fold", "gibrid.dataEpoch"]);
   fresh.append(
-    armedBtn(t.resetAll ?? "Сбросить всё", () => {
-      const all = [];
-      try {
-        for (let i = 0; i < window.localStorage.length; i++) all.push(window.localStorage.key(i));
-      } catch {
-        /* хранилище закрыто — стирать нечего */
-      }
-      for (const k of all) if (k && (k.startsWith("gibrid.") || k === "hub.tour.v1") && !KEEP.has(k)) ls.set(k, null);
-    }),
+    armedBtn(t.resetAll ?? "Сбросить всё", resetAllProgress),
     armedBtn(t.resetAnketa ?? "Сбросить до анкеты", () => ls.set("gibrid.health.v1", null)),
     el("p", "adm-note", t.resetNote ?? ""),
   );

@@ -10,10 +10,11 @@ import { initSkills, intellectOf, masteryNow } from "./skills.js";
 import { initPhone } from "./phone.js";
 import { addPoints, convertFlask, fractionalLevel, levelNeed, migrateFlask } from "./levels.js";
 import { dayNum as dayNumOf, stepDown, stepStatus, stepUp } from "./steps.js";
-import { initWallet } from "./wallet.js";
+import { dayNet, initWallet, settleDayWallet } from "./wallet.js";
 import { initCard } from "./card.js";
 import { needAnketa, openAnketa, openHealth, startSteps } from "./anketa.js";
 import { fill as fillMail, initMail, periodSummaries, postMail } from "./mail.js";
+import { createDailyCards } from "./daily-cards.js";
 
 const params = new URLSearchParams(window.location.search);
 // Админ-режим (автор, 27.10): на компьютере автора (localhost) включён всегда; на сайте — один раз открыть с ?admin=1,
@@ -477,6 +478,9 @@ function loadDailiesState(data) {
   saved.dayGains ??= {};
   saved.dayFlasks ??= {};
   saved.setGains ??= {};
+  // Старые дни уже зачислялись по каждой отметке.
+  saved.walletPaid ??= dayNet(saved);
+  if (saved.pending) saved.pending.walletPaid ??= dayNet(saved.pending);
   // 26.10: «мои задания дня» — старым сохранениям: задания по умолчанию + то, что уже отмечено сегодня
   saved.picked ??= defaultPicks(data, saved.done);
   // 27.10: открытия — старым сохранениям ничего не закрываем: открыто всё, что уже выбирал или делал
@@ -519,6 +523,34 @@ function dayRecord(src, data, closedBy) {
   return { day: src.day, done: src.done.length, ids: [...src.done], attrs, spent: (src.bought ?? []).reduce((sum, b) => sum + b.price, 0), closedBy, ...(src.willBonus ? { willBonus: src.willBonus } : {}), ...(src.sets && Object.keys(src.sets).length ? { sets: { ...src.sets } } : {}), gains: { ...(src.dayGains ?? {}) }, bought: (src.bought ?? []).map((b) => ({ name: b.name, price: b.price })) };
 }
 
+function setReward(base, share, mult) {
+  return Math.max(1, Math.round(base * share * mult));
+}
+
+function yesterdayPlan(state, data) {
+  const gentle = state.gentleDay === state.day;
+  const careful = gentle || state.careful;
+  const shares = data.sets.share.slice(0, careful ? 3 : undefined);
+  const picked = new Set(state.picked);
+  const repeatable = data.groups.flatMap((group) => group.tasks)
+    .filter((task) => picked.has(task.id) && (task.kind === "rep" || task.kind === "time"));
+  return Object.fromEntries(repeatable.map((task) => {
+    const entry = state.steps?.[task.id] ?? { step: task.step ?? 0, since: state.day };
+    const ladder = task.steps ?? [];
+    const step = (gentle ? state.gentleSteps?.[task.id] : undefined) ?? entry.step;
+    const status = stepStatus(data.stepRule, task.id, entry, state.history, state.day, {
+      setsMax: shares.length, last: ladder.length - 1, restricted: data.stepRule?.restricted || careful,
+    });
+    const current = ladder[step] ?? task;
+    return [task.id, {
+      name: current.name,
+      n: current.n,
+      unit: task.unit,
+      gains: shares.map((share) => setReward(data.reward, share, ladder.length ? status.mult : 1)),
+    }];
+  }));
+}
+
 // «Вчера ждёт до полудня» (автор, 28.10): уснул, не было света — несданный день не сгорает в полночь,
 // а ждёт до 12:00 следующего дня: можно дописать и сдать. После полудня закрывается сам, как раньше.
 const PENDING_UNTIL = 12;
@@ -531,6 +563,7 @@ const isYesterday = (key) => {
 function closePending(state, data) {
   if (!state.pending) return false;
   if (isYesterday(state.pending.day) && new Date().getHours() < PENDING_UNTIL) return false;
+  settleDayWallet(state, state.pending, true);
   state.history.push(dayRecord(state.pending, data, "midnight"));
   state.history = state.history.slice(-400);
   state.pending = null;
@@ -541,8 +574,9 @@ function rollDay(state, data) {
   const closedOld = closePending(state, data);
   if (state.day === todayKey()) return closedOld;
   if (!state.closed && isYesterday(state.day) && new Date().getHours() < PENDING_UNTIL) {
-    state.pending = { day: state.day, picked: [...(state.picked ?? [])], done: [...state.done], sets: { ...(state.sets ?? {}) }, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], willBonus: state.willBonus ?? 0 };
+    state.pending = { day: state.day, picked: [...(state.picked ?? [])], done: [...state.done], sets: { ...(state.sets ?? {}) }, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], willBonus: state.willBonus ?? 0, walletPaid: state.walletPaid ?? 0, setPlan: yesterdayPlan(state, data) };
   } else {
+    settleDayWallet(state, state, true);
     state.history.push(dayRecord(state, data, state.closed ? "player" : "midnight"));
   }
   state.history = state.history.slice(-400);
@@ -556,6 +590,8 @@ function rollDay(state, data) {
   state.setGains = {};
   state.dayGains = {};
   state.dayFlasks = {};
+  state.walletPaid = 0;
+  state.cardsTaken = [];
   return true;
 }
 
@@ -591,6 +627,9 @@ function createDailies(box, ctx) {
   const W = data.will ?? { perTask: 1, lagging: 1, day: { red: 1, yellow: 5, green: 12 }, balance: 0.1 };
   const max = data.flaskMax;
   const state = loadDailiesState(data);
+  state.sets ??= {};
+  state.dayGains ??= {};
+  state.cardsTaken ??= [];
   // отстающая сила: её дробный уровень ниже, чем у пары (задание на неё — Воле ещё +1)
   const pairOf = Object.fromEntries((ctx.stats?.attrs ?? []).map((a) => [a.key, a.pair]));
   const lagging = (attr) => {
@@ -630,7 +669,7 @@ function createDailies(box, ctx) {
   const top = el("div", "dailies-top");
   const walletValue = el("b", "");
   const wallet = el("div", "dailies-wallet");
-  wallet.append(el("span", "", `${t.wallet}: `), walletValue);
+  wallet.append(el("span", "", t.cards.dailyExperience), walletValue);
   const libBtn = el("button", "dailies-lib-btn");
   libBtn.type = "button";
   libBtn.setAttribute("aria-expanded", "false");
@@ -638,14 +677,53 @@ function createDailies(box, ctx) {
   const ydayBtn = el("button", "dailies-yday-btn");
   ydayBtn.type = "button";
   ydayBtn.hidden = true;
-  top.append(wallet, el("p", "dailies-hint", t.hint), ydayBtn, libBtn);
+  const healthShortcut = el("button", "dailies-lib-btn dailies-health-shortcut", t.library.health);
+  healthShortcut.type = "button";
+  healthShortcut.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:open-health")));
+  top.append(wallet, libBtn);
 
   // «мои задания дня» (26.10): человек выбирает 6–10 дел из библиотеки; справа — сама библиотека по силам
   const cols = el("div", "dailies-cols with-lib");
   const mine = el("div", "dailies-mine");
   const lib = el("div", "dailies-lib");
   cols.append(mine, lib);
+  const cardOrder = ["strength", "endurance", "agility", "calm", "morality", "order"];
+  const cardGroups = cardOrder.map((id) => data.groups.find((group) => group.id === id)).filter(Boolean);
+  const cards = createDailyCards(cardGroups, t.cards, (id) => {
+    if (state.closed || state.cardsTaken.includes(id)) return false;
+    state.cardsTaken.push(id);
+    commit();
+    return true;
+  }, ADMIN && params.get("rarity-preview") === "1" ? ["ordinary", "uncommon", "rare"] : []);
+  const cardTasks = new Map();
+  const path = el("div", "daily-card-path");
+  path.append(el("strong", "", t.cards.path));
+  const pathCounts = Object.fromEntries(["day", "week", "month"].map((kind) => {
+    const entry = el("div", "daily-card-path-entry");
+    const label = el("span", "", ctx.texts.quests.tabs[kind]);
+    const progress = el("progress", "");
+    progress.max = 1;
+    progress.value = 0;
+    progress.setAttribute("aria-label", ctx.texts.quests.tabs[kind]);
+    entry.append(label, progress);
+    path.append(entry);
+    return [kind, { label, progress }];
+  }));
+  function pathCount(kind, done, count) {
+    const { label, progress } = pathCounts[kind];
+    label.textContent = `${ctx.texts.quests.tabs[kind]} · ${done}/${count}`;
+    progress.max = Math.max(1, count);
+    progress.value = done;
+  }
+  document.addEventListener("hub:quests", ({ detail: q }) => {
+    pathCount("week", q.weekDone, q.weekTotal);
+    pathCount("month", q.monthDone, q.monthTotal);
+  });
+  mine.append(cards.grid, path);
   const L = t.library ?? {};
+  let libraryPower = data.groups[0].id;
+  let libraryQuery = "";
+  let libraryPickedOnly = false;
   const pick = { min: data.pick?.min ?? 6, max: data.pick?.max ?? 10 };
   const allTasks = data.groups.flatMap((g) => g.tasks).filter((task) => task.attr && task.attr !== "dev");
   // задание → сила, и для снятых заданий (график карточки, 29.10)
@@ -654,8 +732,7 @@ function createDailies(box, ctx) {
   // открытия (27.10, SPEC_PROGRAMS §10): старт с малого, следующее дело дорожки мир открывает сам
   const O = data.open ?? null;
   state.open ??= O ? [...O.start] : allTasks.map((x) => x.id);
-  const isOpen = (id) => !O || state.open.includes(id);
-  const openIds = () => allTasks.map((x) => x.id).filter(isOpen);
+  const starterTasks = new Set(O?.start ?? []);
   const openPrev = (id) => {
     for (const ids of Object.values(O?.order ?? {})) {
       const i = ids.indexOf(id);
@@ -712,7 +789,7 @@ function createDailies(box, ctx) {
     const g = (state.dayGains?.[task.id] ?? 0) + amount;
     state.dayGains = { ...(state.dayGains ?? {}), [task.id]: g };
     if (g <= 0) delete state.dayGains[task.id];
-    state.wallet = Math.max(0, state.wallet + amount);
+    settleDayWallet(state, state);
     state.earned = Math.max(0, (state.earned ?? 0) + amount);
     if (data.flasks.includes(task.attr)) addFlask(task.attr, amount);
   }
@@ -720,7 +797,9 @@ function createDailies(box, ctx) {
   const SETS = data.sets ?? { share: [1, 0.6, 0.4, 0.25, 0.15], levels: { light: 1, medium: 3, hard: 5 } };
   const setGain = (i) => Math.max(1, Math.round(reward * (SETS.share[i] ?? 0)));
   // «Бережно» (анкета, 28.10): до 3 подходов — и это полная мера дня
-  let setsMax = state.careful ? 3 : SETS.share.length;
+  const gentleToday = () => state.gentleDay === state.day;
+  const careful = () => state.careful || gentleToday();
+  let setsMax = careful() ? 3 : SETS.share.length;
 
   function makeRow(task) {
     if (task.kind === "rep" || task.kind === "time") return makeSetsRow(task);
@@ -757,10 +836,15 @@ function createDailies(box, ctx) {
   const stepInfo = (task) => {
     const entry = stepEntry(task);
     const ladder = task.steps ?? [];
-    const cur = ladder[entry.step] ?? { name: task.name, n: task.n };
+    const gentleStep = gentleToday() ? state.gentleSteps?.[task.id] : undefined;
+    const cur = ladder[gentleStep ?? entry.step] ?? { name: task.name, n: task.n };
     const status = ladder.length
-      ? stepStatus(data.stepRule, task.id, entry, state.history, state.day, { setsMax, last: ladder.length - 1, restricted: data.stepRule?.restricted || state.careful })
+      ? stepStatus(data.stepRule, task.id, entry, state.history, state.day, { setsMax, last: ladder.length - 1, restricted: data.stepRule?.restricted || careful() })
       : { offer: false, auto: false, mult: 1, canReturn: false };
+    if (gentleToday()) {
+      status.offer = false;
+      status.canReturn = false;
+    }
     return { entry, cur, status };
   };
   // мир поднимает сам: 5 недель с делом или 12 «сложных» дней из 14 (письмом — когда будет почта; пока — всплывашкой)
@@ -787,11 +871,25 @@ function createDailies(box, ctx) {
     event.stopImmediatePropagation();
     openAnketa(ctx);
   });
-  document.addEventListener("hub:open-health", () => openHealth(ctx));
+  document.addEventListener("hub:open-health", () => openHealth(ctx, {
+    active: gentleToday(),
+    careful: Boolean(state.careful),
+    closed: state.closed,
+    activate() {
+      if (state.closed || gentleToday()) return;
+      state.gentleDay = state.day;
+      state.gentleSteps = Object.fromEntries(allTasks
+        .filter((task) => task.steps?.length && !state.sets?.[task.id])
+        .map((task) => [task.id, Math.max(0, stepEntry(task).step - 1)]));
+      setsMax = 3;
+      buildTasks();
+      commit();
+    },
+  }));
   document.addEventListener("hub:anketa-done", (event) => {
     const { profile: P, again, wiped } = event.detail ?? {};
     state.careful = Boolean(P?.careful);
-    setsMax = state.careful ? 3 : SETS.share.length;
+    setsMax = careful() ? 3 : SETS.share.length;
     if (!wiped) {
       for (const [id, step] of Object.entries(startSteps(P))) if (byId[id]) state.steps[id] = { step, since: state.day };
       // 60+: Ловкость начинается с равновесия (ВОЗ, Otago) — растяжка остаётся в библиотеке
@@ -829,9 +927,10 @@ function createDailies(box, ctx) {
     steps.append(stepUpBtn, stepDownBtn);
     name.append(title, info, steps);
     const dots = el("span", "dailies-dots");
-    dots.setAttribute("aria-hidden", "true");
+    if (ui !== "dots" && ui !== "roman") dots.setAttribute("aria-hidden", "true");
     const dotNodes = [];
-    for (let i = 0; i < setsMax; i++) {
+    const visibleSets = Math.max(setsMax, Math.min(state.sets?.[task.id] ?? 0, SETS.share.length));
+    for (let i = 0; i < visibleSets; i++) {
       const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
       const dot = el(ui === "dots" || ui === "roman" ? "button" : "span", `dailies-dot${Object.values(SETS.levels).includes(i + 1) ? " big" : ""}`, ui === "roman" ? ROMAN[i] : undefined);
       if (ui === "dots" || ui === "roman") {
@@ -852,7 +951,7 @@ function createDailies(box, ctx) {
     if (task.check) row.title = `Чем проверить: ${task.check}`;
     const count = () => state.sets?.[task.id] ?? 0;
     // награда за подход: убывает по подходам и тает, когда тело привыкло к ступени (mult)
-    const gainNow = (c) => Math.max(1, Math.round(reward * (SETS.share[c] ?? 0) * stepInfo(task).status.mult));
+    const gainNow = (c) => setReward(reward, SETS.share[c] ?? 0, stepInfo(task).status.mult);
     plus.addEventListener("click", () => {
       const c = count();
       if (state.closed || c >= setsMax) return;
@@ -911,7 +1010,7 @@ function createDailies(box, ctx) {
         d.classList.toggle("on", i < c);
         d.classList.toggle("next", i === c && !state.closed);
         if (ui !== "button") {
-          d.disabled = state.closed || (i !== c && i !== c - 1);
+          d.disabled = state.closed || (i !== c - 1 && (i !== c || c >= setsMax));
           d.setAttribute("aria-label", i === c ? `${cur.name}: ${S.add ?? ""} ${i + 1}` : i === c - 1 ? S.undo ?? "" : `${i + 1}`);
         }
       });
@@ -925,7 +1024,8 @@ function createDailies(box, ctx) {
       plus.disabled = state.closed || c >= setsMax;
       undo.disabled = state.closed || c <= 0;
       undo.hidden = c <= 0;
-      pts.textContent = c >= setsMax ? S.cap ?? "" : `+${gainNow(c)}`;
+      const earned = state.dayGains?.[task.id] ?? 0;
+      pts.textContent = `+${c > 0 ? earned : gainNow(0)}`;
       row.classList.toggle("done", c > 0);
       row.classList.toggle("capped", c >= setsMax);
     };
@@ -945,81 +1045,105 @@ function createDailies(box, ctx) {
   function buildTasks() {
     taskRows = [];
     activeTasks = [];
-    mine.replaceChildren();
     const picked = state.picked.filter((id) => byId[id]);
     total = picked.length;
     for (const group of data.groups) {
       const tasks = group.tasks.filter((task) => picked.includes(task.id));
-      if (!tasks.length) continue;
-      const col = el("div", "dailies-col");
-      col.append(el("h3", "", group.title));
+      cardTasks.set(group.id, tasks);
+      const col = el("div", "daily-card-task-list");
       for (const task of tasks) {
         activeTasks.push({ id: task.id, attr: task.attr });
         col.append(makeRow(task));
       }
-      mine.append(col);
+      cards.setRows(group.id, col);
     }
-    if (!total) mine.append(el("p", "dailies-empty", L.none ?? ""));
     buildLib();
   }
 
-  // библиотека: все задания по силам, нажатие — взять или убрать (перерисовывается при каждой отметке: замки «сделано»)
+  // Библиотека собирает задания, которые открылись по мере роста сил.
   function buildLib() {
     const picked = state.picked.filter((id) => byId[id]);
+    const unlocked = new Set(state.open.filter((id) => byId[id] && !starterTasks.has(id)));
     lib.replaceChildren();
     const head = el("div", "dailies-lib-head");
-    head.append(el("h3", "", L.title ?? ""), el("span", "dailies-lib-count", fill(L.picked, { n: total, max: pick.max })));
-    const emptyPower = data.groups.find((g) => !g.tasks.some((task) => picked.includes(task.id)));
-    const keeper = el("p", "dailies-keeper");
-    keeper.append(el("b", "", `${L.keeper ?? ""}: `), document.createTextNode(emptyPower ? fill(L.empty, { power: emptyPower.title }) : L.ok ?? ""));
-    lib.append(head, keeper);
+    head.append(el("h3", "", L.title ?? ""));
+    lib.append(head);
+    if (!unlocked.size) {
+      lib.append(el("p", "dailies-lib-warn", L.noDiscoveries));
+      return;
+    }
+    head.append(el("span", "dailies-lib-count", fill(L.picked, { n: total, max: pick.max })));
     if (state.closed) lib.append(el("p", "dailies-lib-warn", L.closed ?? ""));
-    else if (total < Math.min(pick.min, openIds().length)) lib.append(el("p", "dailies-lib-warn", fill(L.tooFew, { min: Math.min(pick.min, openIds().length) })));
+    else if (total < Math.min(pick.min, state.open.length)) lib.append(el("p", "dailies-lib-warn", fill(L.tooFew, { min: Math.min(pick.min, state.open.length) })));
     else if (total >= pick.max) lib.append(el("p", "dailies-lib-warn", fill(L.full, { max: pick.max })));
-    const grid = el("div", "dailies-lib-groups");
+    const groups = data.groups.filter((group) => group.tasks.some((task) => unlocked.has(task.id)));
+    if (!groups.some((group) => group.id === libraryPower)) libraryPower = groups[0].id;
+    const grid = el("div", "dailies-lib-groups daily-library-catalog");
+    const nav = el("nav", "daily-library-nav");
+    nav.setAttribute("aria-label", L.title);
+    for (const group of groups) {
+      const button = el("button", "dailies-lib-btn", group.title);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(group.id === libraryPower));
+      button.addEventListener("click", () => {
+        libraryPower = group.id;
+        buildLib();
+        lib.querySelector('[aria-pressed="true"]')?.focus();
+      });
+      nav.append(button);
+    }
+    grid.append(nav);
     lib.append(grid);
-    // «Моё здоровье» (анкета, 28.10): пройти заново или стереть
-    const health = el("button", "dailies-health-link", L.health ?? "");
-    health.type = "button";
-    health.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:open-health")));
-    lib.append(health);
-    // графы по силам — как в окне заданий (автор, 27.10); программы «в разработке» видны, но взять их пока нельзя
-    for (const group of data.groups) {
+    for (const group of groups.filter((group) => group.id === libraryPower)) {
       const box = el("div", "dailies-col dailies-lib-col");
       box.append(el("h3", "", group.title));
-      for (const task of group.tasks) {
-        const dev = task.attr === "dev";
-        const shut = !dev && !isOpen(task.id);
-        const on = !dev && !shut && picked.includes(task.id);
+      const controls = el("div", "daily-library-controls");
+      const search = el("input", "daily-library-search");
+      search.type = "search";
+      search.value = libraryQuery;
+      search.placeholder = L.search;
+      search.setAttribute("aria-label", L.search);
+      const pickedFilter = el("button", "dailies-lib-btn", L.inSet);
+      pickedFilter.type = "button";
+      pickedFilter.setAttribute("aria-pressed", String(libraryPickedOnly));
+      controls.append(search, pickedFilter);
+      box.append(controls);
+      for (const task of group.tasks.filter((task) => unlocked.has(task.id))) {
+        const on = picked.includes(task.id);
         const locked = on && state.done.includes(task.id);
-        const row = el("button", `dailies-task dailies-lib-row${on ? " on" : ""}${dev ? " dev" : ""}${shut ? " shut" : ""}`);
+        const row = el("button", `dailies-task dailies-lib-row${on ? " on" : ""}`);
         row.type = "button";
-        row.append(el("span", "dailies-lib-mark", dev ? "·" : shut ? "🔒" : on ? "✓" : "+"), el("span", "dailies-task-name", shut ? L.mystery ?? "???" : task.name));
-        if (shut) {
-          // «одна тайна впереди» (автор, 27.10): видно только следующее дело — без названия; дальше — ничего
-          const track = Object.values(O?.order ?? {}).find((ids) => ids.includes(task.id));
-          if (!track || track.find((id) => !isOpen(id)) !== task.id) continue;
-          const lvl = needLevel(task.id);
-          const power = t.attrs[task.attr] ?? task.attr;
-          row.append(el("span", "dailies-lib-hint", Number.isFinite(lvl) ? fill(L.lockHint, { power, lvl }) : L.lockSoon ?? ""));
-          if (Number.isFinite(lvl)) row.title = fill(L.lockTitle, { power, lvl, now: state.flasks[task.attr]?.level ?? 0 });
-          row.disabled = true;
-          box.append(row);
-          continue;
-        }
-        if (dev) row.append(el("span", "dailies-tag tag-dev", t.attrShort.dev ?? "")); // сила видна по графе — метка только у «в разработке»
-        row.setAttribute("aria-pressed", on ? "true" : "false");
-        row.disabled = dev || state.closed || locked || (!on && total >= pick.max);
+        row.append(el("span", "dailies-lib-mark", on ? "✓" : "+"), el("span", "dailies-task-name", task.name), el("span", "dailies-lib-hint", on ? L.inSet : L.available));
+        row.setAttribute("aria-pressed", String(on));
+        row.disabled = state.closed || locked || (!on && total >= pick.max);
         if (locked) row.title = L.locked ?? "";
-        else if (!dev && task.check) row.title = `Чем проверить: ${task.check}`;
-        if (!dev) row.addEventListener("click", () => togglePick(task.id));
+        else if (task.check) row.title = `Чем проверить: ${task.check}`;
+        row.addEventListener("click", () => togglePick(task.id));
         box.append(row);
       }
+      const filterRows = () => {
+        const query = libraryQuery.trim().toLocaleLowerCase("ru");
+        for (const row of box.querySelectorAll(".dailies-lib-row")) {
+          row.hidden = (libraryPickedOnly && row.getAttribute("aria-pressed") !== "true")
+            || Boolean(query && !row.textContent.toLocaleLowerCase("ru").includes(query));
+        }
+      };
+      search.addEventListener("input", () => {
+        libraryQuery = search.value;
+        filterRows();
+      });
+      pickedFilter.addEventListener("click", () => {
+        libraryPickedOnly = !libraryPickedOnly;
+        pickedFilter.setAttribute("aria-pressed", String(libraryPickedOnly));
+        filterRows();
+      });
+      filterRows();
       grid.append(box);
     }
   }
   // библиотека — отдельным входом (автор, 27.10): окно заданий как было, кнопка открывает библиотеку на его месте
   const setLib = (open) => {
+    if (open) cards.close(false);
     if (open && board.classList.contains("weak-open")) setWeak(false);
     if (open) board.classList.remove("yday-open");
     board.classList.toggle("lib-open", open);
@@ -1035,7 +1159,7 @@ function createDailies(box, ctx) {
   // слабости (27.10, автор: «в красивую табличку, как и всё»): в полосе — итог дня и вход; таблица — на месте заданий, как библиотека.
   // Табак и алкоголь — по количеству; одна ступень на слабость в день: другая — доплата/возврат разницы, та же — отмена.
   const WK = t.weak ?? {};
-  const buyList = (data.buys ?? []).map((b) => ({ ...b, tiers: b.tiers ?? [{ id: "1", label: "", price: b.price }] }));
+  const buyList = (data.buys ?? []).map((b) => ({ ...b, ...WK.labels?.[b.id], tiers: b.tiers ?? [{ id: "1", label: "", price: b.price }] }));
   const yellow = el("div", "dailies-yellow");
   const yellowHead = el("h3", "");
   yellowHead.append(el("span", "", t.yellowTitle), el("small", "", t.yellowHint));
@@ -1046,20 +1170,21 @@ function createDailies(box, ctx) {
   const weak = el("div", "dailies-weak");
   cols.append(weak);
   const boughtOf = (id) => state.bought.find((b) => b.id === id);
+  const available = () => state.wallet + dayNet(state) - (state.walletPaid ?? 0);
   function chooseTier(item, tier) {
     if (state.closed) return;
     const had = boughtOf(item.id);
     if (had && had.tier === tier.id) {
-      state.wallet += had.price;
       state.bought = state.bought.filter((b) => b !== had);
+      settleDayWallet(state, state);
       toast(`${t.undone} ${had.name}, +${had.price} ${t.refund}`);
       return commit();
     }
     const back = had?.price ?? 0;
-    if (state.wallet + back < tier.price) return toast(t.notEnough);
-    state.wallet += back - tier.price;
+    if (available() + back < tier.price) return toast(t.notEnough);
     const name = tier.label ? `${item.name} · ${tier.label}` : item.name;
     state.bought = [...state.bought.filter((b) => b !== had), { id: item.id, tier: tier.id, name, price: tier.price }];
+    settleDayWallet(state, state);
     toast(`${t.bought} ${name}`);
     commit();
   }
@@ -1074,32 +1199,35 @@ function createDailies(box, ctx) {
       const had = boughtOf(item.id);
       const card = el("div", `dailies-weak-card${had ? " on" : ""}`);
       const top = el("div", "dailies-weak-top");
-      top.append(el("b", "dailies-weak-name", item.name));
-      if (had) top.append(el("span", "dailies-weak-paid", `−${had.price}`));
+      const weakSymbol = el("span", "daily-weak-symbol", WK.symbols?.[item.id]);
+      weakSymbol.setAttribute("aria-hidden", "true");
+      const label = el("div", "daily-weak-label");
+      label.append(el("b", "dailies-weak-name", item.name));
+      if (item.note) label.append(el("span", "dailies-weak-note", item.note));
+      top.append(weakSymbol, label);
       card.append(top);
-      if (item.note) card.append(el("span", "dailies-weak-note", item.note));
       const tiers = el("div", "dailies-weak-tiers");
       for (const tier of item.tiers) {
         const on = had?.tier === tier.id;
         const btn = el("button", `dailies-weak-tier${on ? " on" : ""}`);
         btn.type = "button";
-        btn.append(el("span", "", tier.label || WK.was || ""), el("b", "", `−${tier.price}`));
+        btn.append(el("span", "", tier.label || WK.was || ""), el("b", "", String(tier.price)));
         btn.setAttribute("aria-pressed", on ? "true" : "false");
-        btn.disabled = state.closed || (!on && state.wallet + (had?.price ?? 0) < tier.price);
+        btn.disabled = state.closed || (!on && available() + (had?.price ?? 0) < tier.price);
         btn.addEventListener("click", () => chooseTier(item, tier));
         tiers.append(btn);
       }
       card.append(tiers);
-      if (item.fact) card.append(el("p", "dailies-weak-fact", item.fact));
       grid.append(card);
     }
     weak.append(grid);
     // полоса: что ушло сегодня
     weakSum.replaceChildren();
     if (!state.bought.length) weakSum.append(el("span", "dailies-weak-clean", WK.clean ?? ""));
-    for (const b of state.bought) weakSum.append(el("span", "dailies-weak-chip", `${b.name} −${b.price}`));
+    if (state.bought.length) weakSum.append(el("span", "", fill(WK.spent, { n: spent })));
   }
   function setWeak(open) {
+    if (open) cards.close(false);
     if (open) setLib(false);
     if (open) board.classList.remove("yday-open");
     board.classList.toggle("weak-open", open);
@@ -1119,6 +1247,7 @@ function createDailies(box, ctx) {
   };
   function setYday(open) {
     if (open) {
+      cards.close(false);
       setLib(false);
       if (board.classList.contains("weak-open")) setWeak(false);
     }
@@ -1135,7 +1264,7 @@ function createDailies(box, ctx) {
       return;
     }
     const open = board.classList.contains("yday-open");
-    ydayBtn.textContent = open ? YD.back ?? "" : YD.button ?? "";
+    ydayBtn.textContent = open ? YD.back ?? "" : (YD.button ?? "").replace(/^⧗\s*/, "");
     ydayBtn.classList.toggle("on", open);
     yday.replaceChildren();
     const head = el("div", "dailies-lib-head");
@@ -1143,25 +1272,17 @@ function createDailies(box, ctx) {
     yday.append(head, el("p", "dailies-yday-hint", YD.hint ?? ""));
     const list = el("div", "dailies-yday-list");
     const picked = (P.picked ?? []).filter((id) => byId[id]);
-    for (const id of picked) {
-      const task = byId[id];
-      const was = P.done.includes(id);
-      const row = el("label", `dailies-task dailies-yday-row${was ? " was" : ""}`);
-      const box2 = el("input");
-      box2.type = "checkbox";
-      box2.checked = was || (P.marked ?? []).includes(id);
-      box2.disabled = was;
-      box2.addEventListener("change", () => {
-        P.marked = box2.checked ? [...new Set([...(P.marked ?? []), id])] : (P.marked ?? []).filter((x) => x !== id);
-        saveDailiesState(state);
-        buildYday();
-      });
-      row.append(box2, el("span", "dailies-task-name", task.name), el("span", `dailies-tag tag-${task.attr}`, t.attrShort[task.attr] ?? ""));
-      if (was) row.append(el("span", "dailies-yday-was", YD.was ?? ""));
-      list.append(row);
+    for (const group of data.groups) {
+      const tasks = group.tasks.filter((task) => picked.includes(task.id));
+      if (!tasks.length) continue;
+      const col = el("div", "dailies-col");
+      col.append(el("h3", "", group.title));
+      for (const task of tasks) col.append(yesterdayRow(P, task));
+      list.append(col);
     }
     yday.append(list);
-    const n = P.done.length + (P.marked ?? []).filter((id) => !P.done.includes(id)).length;
+    const marked = Object.keys(P.markedSets ?? {}).filter((id) => P.markedSets[id] > 0);
+    const n = new Set([...P.done, ...(P.marked ?? []), ...marked]).size;
     const foot2 = el("div", "dailies-yday-foot");
     const send = el("button", "dailies-submit dailies-yday-send", fill(YD.send, { n, of: picked.length }));
     send.type = "button";
@@ -1170,28 +1291,83 @@ function createDailies(box, ctx) {
     couldnt.type = "button";
     couldnt.title = YD.couldntHint ?? "";
     couldnt.addEventListener("click", restYesterday);
-    foot2.append(send, couldnt);
+    foot2.append(couldnt, send);
     yday.append(foot2);
+  }
+
+  function yesterdayRow(P, task) {
+    const id = task.id;
+    const plan = P.setPlan?.[id];
+    if (plan) {
+      const original = P.sets[id] ?? 0;
+      const extra = P.markedSets?.[id] ?? 0;
+      const row = el("div", "dailies-yday-set");
+      row.append(el("span", "", `${plan.name} · ${t.sets.per} ${plan.n} ${plan.unit ?? ""}`));
+      const dots = el("div", "dailies-dots");
+      const roman = ["I", "II", "III", "IV", "V"];
+      for (let i = 0; i < Math.max(original, plan.gains.length); i++) {
+        const dot = el("button", `yday-set${i < original + extra ? " on" : ""}`, roman[i]);
+        dot.type = "button";
+        dot.disabled = i < original || (i !== original + extra && i !== original + extra - 1);
+        dot.setAttribute("aria-pressed", String(i < original + extra));
+        dot.addEventListener("click", () => {
+          P.markedSets ??= {};
+          P.markedSets[id] = i < original + extra ? extra - 1 : extra + 1;
+          saveDailiesState(state);
+          buildYday();
+        });
+        dots.append(dot);
+      }
+      row.append(dots);
+      return row;
+    }
+    const was = P.done.includes(id);
+    const row = el("label", `dailies-task dailies-yday-row${was ? " was" : ""}`);
+    const box2 = el("input");
+    box2.type = "checkbox";
+    box2.checked = was || (P.marked ?? []).includes(id);
+    box2.disabled = was;
+    box2.addEventListener("change", () => {
+      P.marked = box2.checked ? [...new Set([...(P.marked ?? []), id])] : (P.marked ?? []).filter((x) => x !== id);
+      saveDailiesState(state);
+      buildYday();
+    });
+    row.append(box2, el("span", "dailies-task-name", task.name));
+    if (was) row.append(el("span", "dailies-yday-was", YD.was ?? ""));
+    return row;
   }
   // сдать вчера: дописанные дела дают то же, что дали бы вчера (опыт, сила, Воля), плюс Воля за цвет дня
   function submitYesterday() {
     const P = state.pending;
     if (!P) return;
-    const fresh = (P.marked ?? []).filter((id) => byId[id] && !P.done.includes(id));
+    const fresh = new Set([...(P.marked ?? []), ...Object.keys(P.markedSets ?? {})]);
     for (const id of fresh) {
       const task = byId[id];
-      state.wallet += reward;
-      state.earned = (state.earned ?? 0) + reward;
-      P.dayGains = { ...(P.dayGains ?? {}), [id]: (P.dayGains?.[id] ?? 0) + reward };
-      if (data.flasks.includes(task.attr)) addFlask(task.attr, reward);
-      addFlask("will", W.perTask ?? 1);
-      P.done.push(id);
+      if (!task || !P.picked?.includes(id)) continue;
+      const plan = P.setPlan?.[id];
+      const original = P.sets?.[id] ?? 0;
+      const added = plan ? plan.gains.slice(original, original + (P.markedSets?.[id] ?? 0)) : P.done.includes(id) ? [] : [reward];
+      if (!added.length) continue;
+      const gain = added.reduce((sum, amount) => sum + amount, 0);
+      state.earned = (state.earned ?? 0) + gain;
+      P.dayGains = { ...(P.dayGains ?? {}), [id]: (P.dayGains?.[id] ?? 0) + gain };
+      if (data.flasks.includes(task.attr)) addFlask(task.attr, gain, false);
+      const first = !P.done.includes(id);
+      if (first) P.done.push(id);
+      if (plan) {
+        P.sets ??= {};
+        P.sets[id] = original + added.length;
+      }
+      const will = (first ? W.perTask : 0) + (added.length - Number(first)) * (W.perSet ?? 1)
+        + (plan && P.sets[id] === plan.gains.length ? W.hardBonus ?? 2 : 0);
+      addFlask("will", will, false);
     }
     const total2 = (P.picked ?? []).filter((id) => byId[id]).length || P.done.length;
     const grade = gradeDay({ closedBy: "player", done: P.done.length }, total2) ?? "red";
     const dayWill = P.done.length ? W.day?.[grade] ?? 0 : 0;
-    if (dayWill) addFlask("will", dayWill);
+    if (dayWill) addFlask("will", dayWill, false);
     P.willBonus = (P.willBonus ?? 0) + dayWill;
+    settleDayWallet(state, P, true);
     state.history.push(dayRecord(P, data, "player"));
     state.history = state.history.slice(-400);
     state.pending = null;
@@ -1206,8 +1382,9 @@ function createDailies(box, ctx) {
   function restYesterday() {
     const P = state.pending;
     if (!P) return;
-    addFlask("will", 1);
+    addFlask("will", 1, false);
     P.willBonus = (P.willBonus ?? 0) + 1;
+    settleDayWallet(state, P, true);
     state.history.push(dayRecord(P, data, "rest"));
     state.history = state.history.slice(-400);
     state.pending = null;
@@ -1234,12 +1411,20 @@ function createDailies(box, ctx) {
   // низ: сдать день
   const foot = el("div", "dailies-foot");
   const stamp = el("span", "dailies-stamp", t.submitted);
+  stamp.setAttribute("role", "status");
   const submit = el("button", "dailies-submit", t.submit);
+  const walletResult = el("div", "daily-card-wallet-result");
+  const walletResultAmount = el("strong", "");
+  walletResult.append(el("span", "", t.cards.walletResult), walletResultAmount);
+  let submittingDay = false;
   submit.type = "button";
   submit.addEventListener("click", () => {
     if (state.closed) return;
     state.closed = true;
-    toast(`${t.dayClosed}: ${state.done.length} ${t.of} ${total}`);
+    settleDayWallet(state, state, true);
+    window.clearTimeout(toastTimer);
+    toastNode.classList.remove("on");
+    toastNode.textContent = "";
     // Воля за сданный день (25.10): по цвету дня — красный +1, жёлтый +5, зелёный +12; день в равновесии — ещё +10 % дневной Воли
     if (state.done.length) {
       const grade = gradeDay({ closedBy: "player", done: state.done.length }, total) ?? "red";
@@ -1264,13 +1449,16 @@ function createDailies(box, ctx) {
           postMail({ key: `bal-${state.day}`, from: "mir", group: "day", groupTitle: M.dayTitle, title: fillMail(M.lagTitle, { power }), text: fillMail(M.lagText, { power, tasks: ideas.join(" или ") }), parts: [{ t: "mera", kind: "lag", text: fillMail(M.lagShort, { power, tasks: ideas.join(" или ") }) }] });
         }
       }
-      window.setTimeout(() => toast(t.willDay.replace("{n}", String(dayWill))), 1600);
-      if (balanceBonus) window.setTimeout(() => toast(t.willBonus.replace("{n}", String(balanceBonus))), 3200);
     }
-    commit();
+    submittingDay = true;
+    try {
+      commit();
+    } finally {
+      submittingDay = false;
+    }
     document.dispatchEvent(new CustomEvent("hub:day-closed", { detail: { by: "player" } }));
   });
-  foot.append(el("p", "dailies-hint", t.submitHint), stamp, submit);
+  foot.append(walletResult, stamp, submit);
 
   // админ-режим (?admin=1): временно, пока нет входа и ролей — потом только для роли admin
   const isAdmin = ADMIN;
@@ -1290,7 +1478,8 @@ function createDailies(box, ctx) {
   reset.type = "button";
   let armed = false;
   let armTimer = 0;
-  reset.addEventListener("click", () => {
+  reset.addEventListener("click", async () => {
+    if (!isAdmin || reset.disabled) return;
     if (!armed) {
       armed = true;
       reset.textContent = t.adminResetConfirm;
@@ -1306,17 +1495,16 @@ function createDailies(box, ctx) {
     armed = false;
     reset.textContent = t.adminReset;
     reset.classList.remove("armed");
-    state.wallet = data.start.wallet;
-    state.earned = 0;
-    state.flasks = freshFlasks(data);
-    state.willBonus = 0;
-    state.done = [];
-    state.sets = {};
-    state.dayGains = {};
-    state.bought = [];
-    state.closed = false;
-    toast(t.adminDone);
-    commit();
+    reset.disabled = true;
+    try {
+      const { resetAllProgress } = await import("./admin.js");
+      resetAllProgress();
+    } catch {
+      reset.disabled = false;
+      toast(ctx.texts.admin.resetFailed);
+      return;
+    }
+    window.location.reload();
   });
   adminBar.append(el("span", "dailies-admin-label", t.adminLabel), reopen, reset);
 
@@ -1361,11 +1549,13 @@ function createDailies(box, ctx) {
     return { lvl: flask.level, from: Math.max(0, flask.progress - gain), to: flask.progress, need, up: flask.progress - gain < 0 };
   }
 
-  function addFlask(key, amount) {
+  function addFlask(key, amount, today = true) {
     const flask = state.flasks[key];
     // сколько очков сила набрала за день — для полосок «Рост за день» в письме (27.10)
-    state.dayFlasks ??= {};
-    state.dayFlasks[key] = (state.dayFlasks[key] ?? 0) + amount;
+    if (today) {
+      state.dayFlasks ??= {};
+      state.dayFlasks[key] = (state.dayFlasks[key] ?? 0) + amount;
+    }
     const up = addPoints(curveOf(key), flask, amount);
     for (let i = 0; i < up; i++) {
       // 28.10 (автор): всплывашку «+1 к Мощи» в окне заданий не показываем — закрывала текст; новый уровень приходит в «Сводке дня»
@@ -1378,10 +1568,34 @@ function createDailies(box, ctx) {
 
   function render() {
     buildLib();
-    walletValue.textContent = String(state.wallet);
+    const earnedToday = Object.values(state.dayGains ?? {}).reduce((sum, amount) => sum + amount, 0);
+    walletValue.textContent = String(earnedToday);
+    walletResult.hidden = state.closed;
+    walletResultAmount.textContent = `${Math.max(0, dayNet(state) - (state.walletPaid ?? 0))} ${t.cards.exp}`;
     const doneCount = state.done.length;
+    pathCount("day", doneCount, total);
     stripMeta.textContent = `${doneCount} ${t.of} ${total} · ${t.wallet.toLowerCase()} ${state.wallet}${state.closed ? " · ✓" : ""}${state.pending ? ` · ${t.yesterday?.strip ?? ""}` : ""}`;
     for (const r of taskRows) r.update();
+    cards.update((id) => {
+      const tasks = cardTasks.get(id);
+      let earned = 0, maximum = 0;
+      for (const task of tasks) {
+        const got = state.dayGains[task.id] ?? 0;
+        earned += got;
+        if (task.kind === "rep" || task.kind === "time") {
+          const count = state.sets[task.id] ?? 0;
+          const mult = stepInfo(task).status.mult;
+          maximum += got + SETS.share.slice(count, setsMax).reduce((sum, share) => sum + setReward(reward, share, mult), 0);
+        } else maximum += reward;
+      }
+      const started = tasks.some((task) => state.done.includes(task.id));
+      return {
+        count: tasks.length,
+        earned,
+        maximum,
+        taken: state.closed || started || state.cardsTaken.includes(id),
+      };
+    });
     for (const [key, node] of Object.entries(flaskNodes)) {
       const flask = state.flasks[key];
       const need = levelNeed(curveOf(key), flask.level);
@@ -1423,13 +1637,36 @@ function createDailies(box, ctx) {
     }
   }
   periodMail();
+  function trainerMail() {
+    const schedule = ctx.texts.mail.schedule;
+    const now = koloDate();
+    if (needAnketa() || now.short) return;
+    const training = schedule.exampleDays;
+    const rest = Array.from({ length: now.weekLen }, (_, i) => i + 1).filter((day) => !training.includes(day));
+    postMail({
+      key: `trainer-week-${now.year}-${now.month}-${now.week}`,
+      from: "mera",
+      title: schedule.title,
+      text: schedule.note,
+      parts: [{ t: "schedule", note: schedule.note, rows: [
+        [schedule.training, training.join(", ")],
+        [schedule.rest, rest.join(", ")],
+        [schedule.holidays, schedule.noHolidays],
+      ] }],
+    });
+  }
+  document.addEventListener("hub:anketa-done", trainerMail);
 
   // полночь: день закрывается сам, отметки обнуляются (проверка раз в минуту)
   window.setInterval(() => {
     // полдень: вчерашний несданный день закрывается сам
     if (state.day === todayKey() && closePending(state, data)) commit();
     if (rollDay(state, data)) {
+      cards.close(false);
+      setsMax = careful() ? 3 : SETS.share.length;
+      buildTasks();
       periodMail();
+      trainerMail();
       toast(t.newDay);
       commit();
       document.dispatchEvent(new CustomEvent("hub:day-closed", { detail: { by: "midnight" } }));
@@ -1442,7 +1679,7 @@ function createDailies(box, ctx) {
     if (!amount) return;
     state.wallet = Math.max(0, state.wallet + amount);
     state.earned = Math.max(0, (state.earned ?? 0) + amount);
-    toast(`${reason} ${amount > 0 ? "+" : "−"}${Math.abs(amount)}`);
+    if (!submittingDay) toast(`${reason} ${amount > 0 ? "+" : "−"}${Math.abs(amount)}`);
     commit();
   });
 
@@ -1462,6 +1699,7 @@ function createDailies(box, ctx) {
     document.querySelector(".modal-close")?.click();
     if (board.hidden) strip.click();
     window.setTimeout(() => {
+      if (byId[id]) cards.open(byId[id].attr);
       const row = document.querySelector(`.dailies-sets[data-task="${CSS.escape(id ?? "")}"]`);
       if (!row) return;
       row.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1491,9 +1729,11 @@ function createDailies(box, ctx) {
       strip.focus();
     }
   });
+  document.addEventListener("hub:modal-closed", () => cards.close(false));
 
-  board.append(toastNode, top, cols, yellow, flasks, foot, adminBar);
+  board.append(toastNode, top, ydayBtn, healthShortcut, cols, yellow, flasks, foot, adminBar, cards.overlay);
   box.append(strip, board);
+  queueMicrotask(trainerMail);
   render();
 }
 
@@ -1807,6 +2047,7 @@ async function main() {
   // ?open=stats — сразу открыть окно (для скриншотов и проверки)
   if (params.get("open") === "stats") ctx.statsUi.open();
   if (params.get("open") === "skills") ctx.skillsUi.open();
+  if (params.get("open") === "quests") ctx.questsUi.open("day");
   document.body.dataset.ready = "1";
 }
 

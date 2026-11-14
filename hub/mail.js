@@ -236,6 +236,12 @@ export function partsNode(parts, U) {
       levelsDone = true;
       box.append(levelsCard(levels, U));
     } else if (p.t === "mera") box.append(meraCard(p, U));
+    else if (p.t === "schedule") {
+      const schedule = el("div", "mail-card mail-mera-card");
+      schedule.append(el("p", "mail-mera-text", p.note));
+      for (const [label, value] of p.rows) schedule.append(line(label, value));
+      box.append(schedule);
+    }
   }
   return box;
 }

@@ -211,7 +211,8 @@ export function initCard(ctx, getDailies) {
     path.append(el("span", "card-lab", T.path ?? ""));
     const pv = el("div", "card-path-val");
     pv.append(el("b", "", fmt(P.got)), el("span", "", fill(T.pathOf, { could: fmt(P.could) })));
-    path.append(pv, bar("path", P.got, P.could), el("span", "card-mini", fill(T.pathPct, { p: P.pct })));
+    const pathProgress = P.got >= P.could ? T.pathComplete : fill(T.pathPct, { p: P.pct });
+    path.append(pv, bar("path", P.got, P.could), el("span", "card-mini", pathProgress));
     left.append(path, soonRow);
     grid.append(left);
 
