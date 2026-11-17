@@ -16,16 +16,17 @@
   box-shadow: 0 8px 20px #0009;
 }
 
-.daily-card[data-rarity="uncommon"] { --rarity: #81ba4b; }
-.daily-card[data-rarity="rare"] { --rarity: #73b3e9; }
-.daily-card:is([data-rarity="uncommon"], [data-rarity="rare"])::after {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border-radius: 11px;
-  box-shadow: inset 0 0 3px var(--rarity), 0 0 8px var(--rarity);
-  opacity: .65;
-  pointer-events: none;
+.daily-card[data-rarity="uncommon"] {
+  --rarity: #81ba4b;
+  --cover-position: 50%;
+  --finish-position: 0%;
+  --finish-light: #e0ffc7;
+}
+.daily-card[data-rarity="rare"] {
+  --rarity: #73b3e9;
+  --cover-position: 100%;
+  --finish-position: 100%;
+  --finish-light: #e0f5ff;
 }
 
 .daily-card-summary {
@@ -33,24 +34,11 @@
   min-height: 302px;
   padding: 18px 8px 14px;
   display: grid;
-  grid-template-rows: 122px 48px 20px 1fr 42px;
+  grid-template-rows: 1fr 42px;
   align-items: center;
   justify-items: center;
   text-align: center;
 }
-.daily-card-icon {
-  display: block;
-  flex: none;
-  width: 116px;
-  height: 116px;
-  background: url("/assets/hub/ui/quests/daily-card-emblems.jpg") var(--icon-x, 0%) 0 / 600% 100% no-repeat;
-  mask-image: radial-gradient(circle, #000 63%, transparent 73%);
-}
-.daily-card-icon-endurance { --icon-x: 20%; }
-.daily-card-icon-agility { --icon-x: 40%; }
-.daily-card-icon-calm { --icon-x: 60%; }
-.daily-card-icon-morality { --icon-x: 80%; }
-.daily-card-icon-order { --icon-x: 100%; }
 .daily-card-summary h3 {
   display: grid;
   place-content: center;
@@ -62,8 +50,7 @@
   font: 700 18px/1.1 var(--font-title);
   letter-spacing: .02em;
 }
-.daily-card-rarity { font: italic 15px var(--font-text); color: var(--rarity, #bda985); }
-.daily-card-status { font-size: 17px; line-height: 1.1; }
+.daily-card-finish { display: none; }
 .daily-card-summary button { width: 100%; max-width: 142px; }
 .daily-card-summary:has(button:disabled) { opacity: .72; }
 
@@ -103,6 +90,23 @@
   text-align: center;
   box-shadow: 0 12px 60px #000d;
 }
+@media (hover: none) and (prefers-reduced-motion: no-preference) {
+  .daily-card-detail:is([data-rarity="uncommon"], [data-rarity="rare"])::after {
+    content: "";
+    position: absolute;
+    inset: 5% 10% 59%;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 39%, var(--rarity) 50%, transparent 61%) 100% 0 / 240% 100%;
+    mask-image: radial-gradient(ellipse, #000, transparent 72%);
+    mix-blend-mode: screen;
+    animation: daily-card-reveal-shine 640ms ease-out both;
+  }
+}
+@keyframes daily-card-reveal-shine {
+  0% { opacity: 0; background-position-x: 100%; }
+  35% { opacity: .28; }
+  100% { opacity: 0; background-position-x: 0; }
+}
 .daily-card-title {
   display: flex;
   align-items: center;
@@ -113,9 +117,7 @@
   border-bottom: 1px solid #997645;
   font: 700 30px var(--font-title);
 }
-.daily-card-title .daily-card-icon { width: 62px; height: 62px; }
 .daily-card-front { flex: 1; display: grid; align-content: center; justify-items: center; gap: 28px; }
-.daily-card-front .daily-card-icon { width: 238px; height: 238px; }
 .daily-card-front .daily-card-invitation { margin: 0; color: #f1d9a5; font: italic 33px var(--font-text); }
 .daily-card-rows { flex: 1; overflow-y: auto; margin: 6px 0; scrollbar-color: #a8793a transparent; }
 .daily-card-task-list .dailies-task { padding: 12px 4px; border-bottom: 1px solid #7652247a; text-align: left; }
@@ -134,7 +136,6 @@
   font-size: 20px;
 }
 .daily-card-score { color: #ffdb8a; font: 700 42px/1 var(--font-title); font-variant-numeric: tabular-nums; }
-.daily-card-back { align-self: center; }
 
 .modal-quests .in-quests .dailies-top { justify-content: space-between; }
 .modal-quests .in-quests .dailies-health-shortcut {
@@ -374,43 +375,63 @@
   padding: 0;
   border: 0;
   border-radius: 0;
-  background: url("/assets/hub/ui/quests/daily-card-deck.png") var(--face-position) 0 / 600% 100% no-repeat;
+  background: url("/assets/hub/ui/quests/daily-card-surfaces.png") var(--cover-position, 0%) 0 / 300% 100% no-repeat;
+  isolation: isolate;
   box-shadow: none;
 }
-.modal-quests-day .daily-card-summary:is([data-rarity="uncommon"], [data-rarity="rare"])::after {
-  inset: 5px 6px 7px;
-  border-radius: 10px;
-  box-shadow: inset 0 0 0 1px var(--rarity), inset 0 0 4px var(--rarity);
-  opacity: .65;
+.modal-quests-day .daily-card-summary .daily-card-finish {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url("/assets/hub/ui/quests/daily-card-glyphs.png") var(--face-position) 0 / 600% 100% no-repeat;
+  mix-blend-mode: screen;
+}
+@media (any-hover: hover) and (prefers-reduced-motion: no-preference) {
+  .modal-quests-day .daily-card-summary:is([data-rarity="uncommon"], [data-rarity="rare"]) .daily-card-finish::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 35% 17% at var(--shine-x, 50%) var(--shine-y, 40%),
+      var(--finish-light), color-mix(in srgb, var(--rarity) 58%, transparent) 27%, transparent 80%);
+    mask: url("/assets/hub/ui/quests/daily-card-materials.png") var(--finish-position) 0 / 200% 100% no-repeat;
+    mix-blend-mode: screen;
+    opacity: 0;
+    transition: opacity 180ms ease-out;
+  }
+  .modal-quests-day .daily-card-summary[data-shine] .daily-card-finish::after { opacity: .76; }
 }
 .modal-quests-day .daily-card-summary h3 {
   position: absolute;
-  top: 178px;
-  height: 33px;
-  opacity: 0;
+  top: 59.4%;
+  height: 7.5%;
+  border: 0;
+  color: #f5d199;
+  font: 700 28px/1 var(--font-title);
+  letter-spacing: .02em;
+  text-shadow: 0 2px 3px #000;
+  text-transform: uppercase;
+  white-space: nowrap;
   pointer-events: none;
 }
-.modal-quests-day .daily-card-summary :is(.daily-card-rarity, .daily-card-status) {
-  position: absolute;
-  left: 0;
-  right: 0;
-  text-align: center;
-  line-height: 1.2;
+.modal-quests-day .daily-card-summary:is([data-power="endurance"], [data-power="morality"]) h3 {
+  font-size: 18px;
+  letter-spacing: 0;
 }
-.modal-quests-day .daily-card-rarity { top: 228px; font: 400 19px/1.2 var(--font-text); color: var(--rarity, #efd292); }
-.modal-quests-day .daily-card-status { top: 262px; font: 400 20px/1.2 var(--font-text); }
 .modal-quests-day .daily-card-summary button {
   position: absolute;
-  top: 294px;
+  top: 79.8%;
   left: 12%;
   width: 76%;
-  height: 23px;
+  height: 8.3%;
   max-width: none;
+  display: grid;
+  place-items: center;
   padding: 0;
   border: 0;
   background: none;
   box-shadow: none;
-  font: 400 20px var(--font-text);
+  font: 400 21px/1 var(--font-text);
 }
 .modal-quests-day .daily-card-summary button:hover:not(:disabled) { color: #fff2c9; text-shadow: 0 0 8px #e6a545; }
 .modal-quests-day .daily-card-path {
@@ -461,17 +482,78 @@
 .modal-quests-day .dailies-admin-label { color: #dfc099; font: 400 19px var(--font-text); letter-spacing: normal; text-transform: none; }
 .modal-quests-day .dailies-admin-btn { padding: 7px 16px; border-width: 1px; border-radius: 4px; font: 400 20px var(--font-text); }
 .modal-quests-day .dailies-admin-btn:first-of-type { border-color: transparent; background: transparent; color: #dfc099; }
-.modal-quests-day .daily-card-detail { width: 472px; height: 708px; padding: 42px 50px 29px; border: 0; }
-.modal-quests-day .daily-card-detail[data-power="strength"][data-side="front"] {
-  background-image: url("/assets/hub/ui/quests/daily-card-front.jpg");
+.modal-quests-day .daily-card-detail {
+  width: 472px;
+  height: 708px;
+  padding: 42px 50px 29px;
+  border: 0;
+  background-size: 100% 100%;
+  isolation: isolate;
 }
-.modal-quests-day .daily-card-detail[data-side="front"] .daily-card-title { order: 1; border: 0; padding: 0; font-size: 47px; }
+.modal-quests-day .daily-card-detail[data-side="front"] {
+  position: relative;
+  width: 354px;
+  padding: 0;
+  background: url("/assets/hub/ui/quests/daily-card-detail-covers.png") var(--cover-position, 0%) 0 / 300% 100% no-repeat;
+}
+.modal-quests-day .daily-card-summary:has(button:not(:disabled)) { cursor: pointer; }
+.modal-quests-day .daily-card-detail[data-side="back"] {
+  padding-inline: 64px;
+  background-image: url("/assets/hub/ui/quests/daily-card-detail-back.png");
+}
+.modal-quests-day .daily-card-detail[data-side="front"] .daily-card-title {
+  position: absolute;
+  inset: 58% 7% 32%;
+  border: 0;
+  padding: 0;
+  font-size: 34px;
+}
 .modal-quests-day .daily-card-title:focus { outline: none; }
 .modal-quests-day .daily-card-detail[data-side="front"] .daily-card-front { display: contents; }
-.modal-quests-day .daily-card-front-emblem { order: 0; display: grid; place-content: center; height: 278px; }
-.modal-quests-day .daily-card-invitation { order: 2; margin-top: 16px; }
-.modal-quests-day .daily-card-detail[data-side="front"] .dailies-submit { order: 3; align-self: center; margin-top: 70px; }
-.modal-quests-day .daily-card-detail[data-side="front"] .daily-card-back { order: 4; margin-top: 14px; }
-.modal-quests-day .daily-card-detail[data-side="back"] .daily-card-rows { flex: 0 1 auto; max-height: 386px; }
-.modal-quests-day .daily-card-detail[data-side="back"] .daily-card-reward { margin: auto 0 18px; border: 0; }
+.modal-quests-day .daily-card-front-emblem,
+.modal-quests-day .daily-card-front-glyph {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.modal-quests-day .daily-card-front-glyph {
+  background: url("/assets/hub/ui/quests/daily-card-glyphs.png") var(--face-position) 0 / 600% 100% no-repeat;
+  mix-blend-mode: screen;
+}
+.modal-quests-day .daily-card-detail[data-power="strength"] .daily-card-front-glyph {
+  background: url("/assets/hub/ui/quests/daily-card-detail-strength.png") center 29% / 53% auto no-repeat;
+}
+.modal-quests-day .daily-card-front .daily-card-invitation {
+  position: absolute;
+  inset: 71.4% 10% 22%;
+  display: grid;
+  align-content: center;
+  margin: 0;
+  font: italic 22px/1.06 var(--font-text);
+}
+.daily-card-turn {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 17px;
+  background: transparent;
+  cursor: pointer;
+}
+.daily-card-turn-label {
+  position: absolute;
+  top: 78.6%;
+  inset-inline: 0;
+  color: #e1be81;
+  font: 600 21px/1 var(--font-title);
+  text-align: center;
+  pointer-events: none;
+}
+.daily-card-turn:is(:hover, :focus-visible) .daily-card-turn-label { color: #ffe3a9; }
+.daily-card-turn:focus-visible {
+  outline: 2px solid #fff1c4;
+  outline-offset: -5px;
+}
+.modal-quests-day .daily-card-detail[data-side="back"] .daily-card-rows { flex: 0 1 auto; max-height: 328px; }
+.modal-quests-day .daily-card-detail[data-side="back"] .daily-card-reward { margin: auto 0 42px; border: 0; }
 .modal-quests-day .daily-card-score { font-size: 46px; }

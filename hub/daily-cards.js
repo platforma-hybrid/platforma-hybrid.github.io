@@ -5,14 +5,7 @@ function element(tag, className, text) {
   return node;
 }
 
-function icon(id) {
-  const image = element("span", `daily-card-icon daily-card-icon-${id}`);
-  image.setAttribute("aria-hidden", "true");
-  return image;
-}
-
 const RARITIES = ["ordinary", "uncommon", "rare"];
-const plural = new Intl.PluralRules("ru");
 
 export function createDailyCards(groups, texts, onTake, previewRarities = []) {
   const grid = element("div", "daily-card-grid");
@@ -27,22 +20,24 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
   title.tabIndex = -1;
   const front = element("div", "daily-card-front");
   const frontEmblem = element("div", "daily-card-front-emblem");
+  frontEmblem.setAttribute("aria-hidden", "true");
+  frontEmblem.append(element("span", "daily-card-front-glyph"));
   const invitation = element("p", "daily-card-invitation");
-  const take = element("button", "dailies-submit", texts.take);
+  const take = element("button", "daily-card-turn");
   take.type = "button";
+  take.append(element("span", "daily-card-turn-label", texts.take));
   front.append(frontEmblem, invitation, take);
   const rows = element("div", "daily-card-rows");
   const reward = element("div", "daily-card-reward");
   const score = element("strong", "daily-card-score");
   reward.append(element("span", "", texts.reward), score);
-  const back = element("button", "dailies-lib-btn daily-card-back", texts.back);
-  back.type = "button";
-  card.append(title, front, rows, reward, back);
+  card.append(title, front, rows, reward);
   overlay.append(card);
 
   let active = null;
   let trigger = null;
   const entries = new Map();
+  const pointerShine = window.matchMedia("(any-hover: hover) and (prefers-reduced-motion: no-preference)");
 
   function close(restoreFocus = true) {
     if (overlay.hidden) return;
@@ -60,9 +55,8 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     card.dataset.rarity = entry.rarity;
     card.dataset.power = group.id;
     card.dataset.side = info.taken ? "back" : "front";
+    card.style.setProperty("--face-position", entry.face.style.getPropertyValue("--face-position"));
     title.replaceChildren(document.createTextNode(group.title));
-    if (!info.taken && group.id !== "strength") frontEmblem.replaceChildren(icon(group.id));
-    else frontEmblem.replaceChildren();
     front.hidden = info.taken;
     rows.hidden = reward.hidden = !info.taken;
     invitation.textContent = texts.invitation[group.id] ?? "";
@@ -72,13 +66,13 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     }
   }
 
-  function open(id, source = null) {
+  function open(id, source = null, focusTurn = false) {
     if (!entries.get(id)?.info?.count) return;
     active = id;
     trigger = source;
     overlay.hidden = false;
     draw();
-    title.focus();
+    (focusTurn && !front.hidden ? take : title).focus();
   }
 
   for (const [index, group] of groups.entries()) {
@@ -86,14 +80,21 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     face.dataset.power = group.id;
     face.style.setProperty("--face-position", `${index * 20}%`);
     const rarity = RARITIES.includes(previewRarities[index]) ? previewRarities[index] : "ordinary";
-    const status = element("span", "daily-card-status");
-    const rarityLabel = element("span", "daily-card-rarity");
+    const finish = element("span", "daily-card-finish");
+    finish.setAttribute("aria-hidden", "true");
     const button = element("button", "dailies-lib-btn", texts.open);
     button.type = "button";
-    button.setAttribute("aria-label", `${texts.open} · ${group.title}`);
-    button.addEventListener("click", () => open(group.id, button));
-    face.append(element("h3", "", group.title), rarityLabel, status, button);
-    entries.set(group.id, { group, face, button, status, rarityLabel, previewRarity: rarity, rows: null, info: null });
+    face.addEventListener("click", (event) => open(group.id, button, event.detail === 0));
+    face.addEventListener("pointermove", (event) => {
+      if (event.pointerType !== "mouse" || !pointerShine.matches || face.dataset.rarity === "ordinary" || button.disabled) return;
+      const bounds = face.getBoundingClientRect();
+      face.style.setProperty("--shine-x", `${(event.clientX - bounds.left) / bounds.width * 100}%`);
+      face.style.setProperty("--shine-y", `${(event.clientY - bounds.top) / bounds.height * 100}%`);
+      face.dataset.shine = "";
+    });
+    face.addEventListener("pointerleave", () => delete face.dataset.shine);
+    face.append(finish, element("h3", "", group.title), button);
+    entries.set(group.id, { group, face, button, previewRarity: rarity, rows: null, info: null });
     grid.append(face);
   }
 
@@ -107,7 +108,6 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     }
     title.focus();
   });
-  back.addEventListener("click", () => close());
   overlay.addEventListener("click", (event) => {
     if (event.target === overlay) close();
   });
@@ -121,7 +121,10 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     const buttons = [...card.querySelectorAll("button:not(:disabled), input:not(:disabled)")]
       .filter((node) => node.getClientRects().length > 0);
     const first = buttons[0], last = buttons.at(-1);
-    if ((event.shiftKey && (document.activeElement === first || document.activeElement === title))
+    if (!first) {
+      event.preventDefault();
+      title.focus();
+    } else if ((event.shiftKey && (document.activeElement === first || document.activeElement === title))
         || (!event.shiftKey && document.activeElement === last)) {
       event.preventDefault();
       (event.shiftKey ? last : first)?.focus();
@@ -142,10 +145,11 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
         entry.info = info;
         entry.rarity = RARITIES.includes(info.rarity) ? info.rarity : entry.previewRarity;
         entry.face.dataset.rarity = entry.rarity;
-        entry.rarityLabel.textContent = texts[entry.rarity];
-        entry.status.textContent = info.count ? `${info.count} ${texts.tasks[plural.select(info.count)]}` : texts.empty;
         entry.button.disabled = !info.count;
-        entry.button.setAttribute("aria-label", `${texts.open} · ${entry.group.title}`);
+        const action = info.count ? texts.open : texts.empty;
+        const label = [action, entry.group.title];
+        if (entry.rarity !== "ordinary") label.push(texts[entry.rarity]);
+        entry.button.setAttribute("aria-label", label.join(" · "));
       }
       if (active && !entries.get(active).info.count) close(false);
       else draw();
