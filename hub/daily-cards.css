@@ -231,26 +231,194 @@
 
 .wood.modal.modal-health-overview {
   width: 880px;
+  height: 660px;
+  max-width: calc(100vw - 40px);
   box-sizing: border-box;
-  padding: 116px 164px 105px;
-  background-image: url("/assets/hub/ui/quests/daily-health.jpg");
-  background-position: center;
-  background-size: 100% 100%;
+  padding: 124px 172px 112px;
   border: 0;
+  border-radius: 0;
+  background-size: 100% 100%;
+  background-position: center;
+  background-image: url("/assets/hub/ui/quests/health-overview.png");
 }
-.health-overview { text-align: center; gap: 14px; }
-.health-overview .anketa-mode { display: flex; justify-content: space-between; gap: 12px; }
-.health-gentle-title { margin: 10px 0 0; font: 700 27px var(--font-title); color: #ead39c; }
-.health-overview > .anketa-go, .health-overview > .anketa-alt { align-self: center; }
-.health-overview .anketa-go:disabled { opacity: .62; cursor: default; }
+.modal-health-overview .modal-body,
+.modal-health-overview .health-overview-shell {
+  height: 100%;
+}
+.modal-health-overview .health-overview {
+  height: 100%;
+  min-height: 0;
+  text-align: center;
+  gap: 14px;
+}
+.modal-health-overview .health-overview > .anketa-title {
+  margin: 0 0 2px;
+  color: #f0d89a;
+  font: 600 36px/1.1 var(--font-title);
+}
+.modal-health-overview .health-overview .anketa-mode {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px solid #8c713e;
+  border-radius: 2px;
+  color: #c7b58d;
+  background: #1b1710a6;
+  font: 400 15px/1.25 var(--font-text);
+}
+.modal-health-overview .anketa-mode strong {
+  color: #e7d19c;
+}
+.modal-health-overview .health-gentle-title {
+  margin: 5px 0 0;
+  color: #eccb84;
+  font: 600 30px/1.1 var(--font-title);
+}
+.modal-health-overview p.anketa-text {
+  margin: 0;
+  color: #d4c4a3;
+  font: 400 16px/1.45 var(--font-text);
+}
+.modal-health-overview .health-overview > .anketa-go {
+  align-self: center;
+  width: 290px;
+  height: 62px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 0;
+  color: #f0d39a;
+  font: 600 23px/1.1 var(--font-title);
+  background: url("/assets/hub/ui/quests/daily-card-detail-action.png") center / 100% 100% no-repeat;
+  clip-path: polygon(7% 0, 93% 0, 100% 27%, 100% 73%, 93% 100%, 7% 100%, 0 73%, 0 27%);
+}
+.modal-health-overview .health-overview > .anketa-go:hover {
+  filter: brightness(1.15);
+  box-shadow: none;
+}
+.modal-health-overview .health-overview > .anketa-go:disabled {
+  opacity: .7;
+  color: #c8c391;
+  cursor: default;
+  filter: none;
+}
+.modal-health-overview .health-overview > .anketa-alt {
+  align-self: center;
+  min-height: 36px;
+  margin-top: 1px;
+  padding: 6px 18px;
+  border: 1px solid #a2874d;
+  border-radius: 2px;
+  color: #d9c594;
+  font: 400 15px/1.2 var(--font-text);
+  background: #1c191154;
+}
+.modal-health-overview .anketa-foot {
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid #8a713947;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+.modal-health-overview .anketa-foot .health-storage-note {
+  margin: 0;
+  color: #aa9c7e;
+  font: 400 12px/1.3 var(--font-text);
+}
+.modal-health-overview .anketa-foot .anketa-alt {
+  flex: none;
+  min-height: 28px;
+  padding: 4px 0 4px 14px;
+  border: 0;
+  border-left: 1px solid #8a71394d;
+  border-radius: 0;
+  color: #beaa7e;
+  font: 400 12px/1.3 var(--font-text);
+  background: transparent;
+}
+.modal-health-overview .health-back {
+  position: absolute;
+  top: 29px;
+  left: 35px;
+  min-height: 33px;
+  padding: 6px 14px;
+  border: 1px solid #9e8048;
+  border-radius: 2px;
+  color: #e0c897;
+  font: 400 15px/1.1 var(--font-text);
+  background: #1b180ee0;
+}
+.modal-health-overview > .modal-close {
+  top: 24px;
+  right: 30px;
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  padding: 0;
+  border: 1px solid #ad8c4a;
+  border-radius: 50%;
+  color: #e8c88c;
+  font: 400 26px/1 var(--font-text);
+  background: #16140dda;
+}
+
+.ph-modal .wood.modal.modal-health-overview {
+  --health-height: min(660px, calc((100vh - 24px) / .85));
+  width: calc(var(--health-height) * 4 / 3);
+  height: var(--health-height);
+  max-height: none;
+  max-width: none;
+  zoom: .85;
+  padding: calc(var(--health-height) * .188) calc(var(--health-height) * .26) calc(var(--health-height) * .17);
+}
+.ph-modal .modal-health-overview .health-overview {
+  overflow-y: auto;
+  scrollbar-color: #94733d transparent;
+  scrollbar-width: thin;
+  padding-inline: 3px;
+}
+.ph-modal .modal-health-overview .health-overview > .anketa-go {
+  flex: none;
+  max-width: 100%;
+}
+.ph-modal .modal-health-overview .health-overview > .anketa-alt {
+  flex: none;
+}
+
+.modal-health-overview .health-overview > .anketa-go:focus-visible {
+  outline: 2px solid #fff1c4;
+  outline-offset: -5px;
+}
+
+.ph-modal .modal-health-overview .health-overview > .anketa-alt,
+.ph-modal .modal-health-overview .anketa-foot .anketa-alt {
+  min-height: 52px;
+}
+.ph-modal .modal-health-overview .anketa-foot .health-storage-note,
+.ph-modal .modal-health-overview .anketa-foot .anketa-alt {
+  font-size: 14px;
+}
+.ph-modal .modal-health-overview .health-back {
+  top: 18px;
+  min-height: 52px;
+}
+.ph-modal .modal-health-overview > .modal-close {
+  top: 16px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+}
+
+.modal-backdrop.ph-modal:has(.modal-health-overview) {
+  z-index: 3100;
+}
 
 @media (max-width: 620px) {
   .daily-card-summary h3 { font-size: 17px; }
   .daily-card-detail { width: min(100%, 560px); }
-  .wood.modal.modal-health-overview {
-    padding: 44px 30px;
-    background-image: linear-gradient(#110e0bd9, #110e0bc9), url("/assets/hub/ui/quests/daily-health.jpg");
-  }
 }
 
 /* Позиции окна «День» сняты с утверждённого макета 1448 × 1086. */

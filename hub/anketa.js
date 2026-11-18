@@ -226,20 +226,26 @@ export function openHealth(ctx, today) {
   const again = el("button", "anketa-alt", T.again ?? "");
   again.type = "button";
   again.addEventListener("click", () => openAnketa(ctx, { again: true }));
+  const storage = el("p", "health-storage-note", p?.consent ? T.healthStorage ?? T.mineHas ?? "" : T.mineNone ?? "");
   const wipe = el("button", "anketa-alt", T.wipe ?? "");
   wipe.type = "button";
   wipe.addEventListener("click", () => {
     const keep = loadHealth();
     saveHealth(keep ? { done: true, consent: false, at: keep.at } : null);
     document.dispatchEvent(new CustomEvent("hub:anketa-done", { detail: { profile: loadHealth(), again: true, wiped: true } }));
+    storage.textContent = T.mineNone ?? "";
+    const modeValue = root.querySelector(".anketa-mode strong");
+    if (modeValue) modeValue.textContent = T.healthStandard ?? "";
     wipe.textContent = T.wiped ?? "";
     wipe.disabled = true;
   });
   const f = el("div", "anketa-foot");
-  const back = el("button", "anketa-alt", T.healthBack);
+  const back = el("button", "anketa-alt health-back", T.healthBack);
   back.type = "button";
   back.addEventListener("click", () => ctx.questsUi.open("day"));
-  f.append(back, wipe);
-  root.append(again, el("p", "anketa-text", p?.consent ? T.mineHas ?? "" : T.mineNone ?? ""), f);
-  ctx.modal.showNode(T.mineTitle ?? "", root, "modal-anketa modal-health-overview");
+  f.append(storage, wipe);
+  root.append(again, f);
+  const shell = el("div", "health-overview-shell");
+  shell.append(back, root);
+  ctx.modal.showNode(T.mineTitle ?? "", shell, "modal-anketa modal-health-overview");
 }
