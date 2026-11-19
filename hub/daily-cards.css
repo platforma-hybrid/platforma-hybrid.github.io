@@ -178,9 +178,16 @@
 
 .dailies-lib .daily-library-catalog {
   display: grid;
-  grid-template-columns: minmax(185px, 1fr) minmax(0, 3fr);
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   gap: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #967139 transparent;
 }
+.dailies-lib .daily-library-catalog.has-nav { grid-template-columns: 185px minmax(0, 1fr); }
 .daily-library-nav { display: flex; flex-direction: column; gap: 5px; }
 .daily-library-nav .dailies-lib-btn { text-align: left; }
 .daily-library-catalog [aria-pressed="true"] { background-color: #593d1f; color: #fff0c6; }
@@ -195,9 +202,8 @@
   color: #eedbb1;
   font: inherit;
 }
-.dailies-lib-row[hidden] { display: none; }
-.dailies-yday .dailies-yday-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.dailies-yday-set { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 0; font-size: 18px; }
+.daily-library-entry[hidden], .daily-library-footer { display: none; }
+.dailies-board:not(.yday-open) > .dailies-yday-foot { display: none; }
 .yday-set {
   min-width: 34px;
   padding: 3px 5px;
@@ -546,6 +552,192 @@
   box-shadow: inset 0 0 12px #d0a14a24;
 }
 .modal-quests-day .in-quests .dailies-cols { left: 218px; top: 312px; width: 1110px; height: 450px; }
+.modal-quests-day .in-quests.lib-open :is(.dailies-top .dailies-lib-btn, .dailies-yellow) { display: none; }
+.modal-quests-day .in-quests .dailies-lib {
+  height: 434px;
+  max-height: 434px;
+  padding: 16px 22px;
+  border: 0;
+  border-radius: 0;
+  gap: 0;
+  background: #100d09de;
+  overflow: hidden;
+}
+.modal-quests-day .dailies-lib .dailies-lib-head {
+  flex: none;
+  min-height: 38px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #9d773c;
+}
+.modal-quests-day .in-quests .dailies-lib .dailies-lib-head h3 { font-size: 27px; color: #efd199; }
+.daily-library-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 24px;
+  color: #efd199;
+  text-align: center;
+}
+.daily-library-empty strong { font: 400 31px var(--font-title); }
+.daily-library-empty p { margin: 0; color: #ccba98; font: 400 22px var(--font-text); }
+.daily-library-book {
+  position: relative;
+  width: 91px;
+  height: 91px;
+  margin-bottom: 10px;
+  border: 1px solid #a78546;
+  border-radius: 50%;
+  box-shadow: 0 0 20px #b9882929, inset 0 0 23px #9f742622;
+  background: url("/assets/hub/icons/book.svg") center / 45px auto no-repeat, radial-gradient(ellipse, #5a401945, transparent 72%);
+}
+.daily-library-book::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid #6a522c;
+  border-radius: 50%;
+}
+.daily-library-entry {
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 0 8px;
+  border-bottom: 1px solid #88703c80;
+  color: #cfb781;
+  font-size: 21px;
+}
+.daily-library-catalog.has-nav .daily-library-entry { grid-template-columns: 172px minmax(0, 1fr) 180px; }
+.daily-library-nav { padding: 12px 2px 0; }
+.daily-library-entry strong { color: #efdfbb; font: 400 24px var(--font-text); }
+.modal-quests-day .in-quests .daily-library-entry .dailies-lib-row {
+  width: 164px;
+  min-height: 43px;
+  justify-self: end;
+  border: 1px solid #987940;
+  border-radius: 4px;
+  background: #221b0f;
+  color: #f2d89f;
+  font: 400 20px var(--font-text);
+  text-align: center;
+  cursor: pointer;
+}
+.modal-quests-day .in-quests .daily-library-entry .dailies-lib-row.on { color: #aad184; }
+.modal-quests-day .in-quests .daily-library-entry .dailies-lib-row:hover:not(:disabled) { background: #382a15; }
+.modal-quests-day .in-quests .daily-library-entry .dailies-lib-row:disabled { cursor: default; }
+.modal-quests-day .in-quests.lib-open > .daily-library-footer {
+  position: absolute;
+  left: 303px;
+  top: 846px;
+  width: 940px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  z-index: 2;
+}
+.daily-library-footer .dailies-lib-count { margin-right: auto; color: #efd199; font: 400 25px var(--font-text); }
+.modal-quests-day .in-quests .daily-library-footer .dailies-lib-btn {
+  width: 207px;
+  height: 49px;
+  border: 1px solid #c7a55f;
+  border-radius: 5px;
+  background: #302617;
+  color: #f2d89f;
+  font: 400 24px var(--font-text);
+}
+.modal-quests-day .in-quests .daily-library-footer .dailies-lib-btn:hover { background: #3b2e1a; }
+.modal-quests-day .in-quests .dailies-yday {
+  height: 434px;
+  padding: 16px 22px 10px;
+  border: 0;
+  border-radius: 0;
+  background: rgba(16, 13, 9, .62);
+  overflow: hidden;
+}
+.modal-quests-day .dailies-yday .dailies-lib-head {
+  flex: none;
+  min-height: 38px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #9d773c;
+}
+.modal-quests-day .dailies-yday .dailies-lib-head h3 { font-size: 27px; color: #efd199; }
+.modal-quests-day .dailies-yday .dailies-lib-count,
+.modal-quests-day .in-quests .dailies-yday-hint { color: #ccba98; font-size: 18px; }
+.modal-quests-day .dailies-yday-list {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #967139 transparent;
+}
+.dailies-yday-row {
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr) 270px;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 0 8px;
+  border-bottom: 1px solid #7b633b69;
+  color: #c9ad75;
+  font-size: 19px;
+}
+.dailies-yday-name { color: #efdfbb; font: 400 23px/1.2 var(--font-text); }
+.dailies-yday-actions { display: flex; justify-content: flex-end; align-items: center; padding-right: 8px; }
+.dailies-yday-actions .yday-set { min-width: 37px; min-height: 28px; }
+.modal-quests-day .in-quests .dailies-yday-mark {
+  justify-content: center;
+  gap: 7px;
+  width: 225px;
+  color: #c9ad75;
+  border: 0;
+}
+.modal-quests-day .in-quests .dailies-yday-mark input {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #c9ad75;
+  border-radius: 2px;
+  background: transparent;
+  --tick-w: 2px;
+}
+.modal-quests-day .in-quests .dailies-yday-mark input:checked { border-color: #aad184; }
+.modal-quests-day .in-quests .dailies-yday-mark input:checked::after { border-color: #aad184; }
+.modal-quests-day .in-quests .dailies-yday-mark.is-checked { color: #aad184; }
+.modal-quests-day .in-quests.yday-open > .dailies-yday-foot {
+  position: absolute;
+  left: 303px;
+  top: 846px;
+  width: 940px;
+  height: 60px;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 207px;
+  align-items: center;
+  gap: 22px;
+  margin: 0;
+  z-index: 2;
+}
+.dailies-yday-count { color: #efd199; font: 400 25px var(--font-text); }
+.modal-quests-day .dailies-yday-foot .dailies-yday-rest {
+  justify-self: center;
+  padding: 10px 14px;
+  border: 1px solid #947340;
+  border-radius: 4px;
+  color: #e1c796;
+  text-decoration: none;
+  font: 400 19px var(--font-text);
+}
+.modal-quests-day .in-quests .dailies-yday-foot .dailies-yday-send {
+  width: 207px;
+  height: 49px;
+  border-radius: 5px;
+  font: 400 24px var(--font-text);
+}
 .modal-quests-day .in-quests .dailies-weak { height: 450px; max-height: 450px; }
 .modal-quests-day .in-quests .dailies-weak-card { background: linear-gradient(110deg, #17140f, #1b1711); }
 .modal-quests-day .in-quests .dailies-mine { max-height: none; }

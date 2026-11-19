@@ -729,6 +729,17 @@ function createDailies(box, ctx) {
   });
   mine.append(cards.grid, path);
   const L = t.library ?? {};
+  const libraryFooter = el("div", "daily-library-footer");
+  const libraryCount = el("span", "dailies-lib-count");
+  libraryCount.setAttribute("aria-live", "polite");
+  const libraryBack = el("button", "dailies-lib-btn", L.back ?? "");
+  libraryBack.type = "button";
+  libraryBack.addEventListener("click", () => {
+    setLib(false);
+    libBtn.focus();
+  });
+  libraryFooter.append(libraryCount, libraryBack);
+  board.append(libraryFooter);
   let libraryPower = data.groups[0].id;
   let libraryQuery = "";
   let libraryPickedOnly = false;
@@ -1072,39 +1083,56 @@ function createDailies(box, ctx) {
   function buildLib() {
     const picked = state.picked.filter((id) => byId[id]);
     const unlocked = new Set(state.open.filter((id) => byId[id] && !starterTasks.has(id)));
+    const active = document.activeElement;
+    const activeTask = lib.contains(active) ? active.dataset.libraryTask : null;
+    const scrollTop = lib.querySelector(".daily-library-catalog")?.scrollTop ?? 0;
     lib.replaceChildren();
     const head = el("div", "dailies-lib-head");
     head.append(el("h3", "", L.title ?? ""));
     lib.append(head);
+    libraryCount.hidden = !unlocked.size;
     if (!unlocked.size) {
-      lib.append(el("p", "dailies-lib-warn", L.noDiscoveries));
+      const empty = el("div", "daily-library-empty");
+      const book = el("i", "daily-library-book");
+      book.setAttribute("aria-hidden", "true");
+      empty.append(book, el("strong", "", L.emptyTitle ?? ""), el("p", "", L.noDiscoveries ?? ""));
+      lib.append(empty);
       return;
     }
-    head.append(el("span", "dailies-lib-count", fill(L.picked, { n: total, max: pick.max })));
+    libraryCount.textContent = fill(L.picked, { n: total, max: pick.max });
     if (state.closed) lib.append(el("p", "dailies-lib-warn", L.closed ?? ""));
     else if (total < Math.min(pick.min, state.open.length)) lib.append(el("p", "dailies-lib-warn", fill(L.tooFew, { min: Math.min(pick.min, state.open.length) })));
     else if (total >= pick.max) lib.append(el("p", "dailies-lib-warn", fill(L.full, { max: pick.max })));
     const groups = data.groups.filter((group) => group.tasks.some((task) => unlocked.has(task.id)));
-    if (!groups.some((group) => group.id === libraryPower)) libraryPower = groups[0].id;
-    const grid = el("div", "dailies-lib-groups daily-library-catalog");
-    const nav = el("nav", "daily-library-nav");
-    nav.setAttribute("aria-label", L.title);
-    for (const group of groups) {
-      const button = el("button", "dailies-lib-btn", group.title);
-      button.type = "button";
-      button.setAttribute("aria-pressed", String(group.id === libraryPower));
-      button.addEventListener("click", () => {
-        libraryPower = group.id;
-        buildLib();
-        lib.querySelector('[aria-pressed="true"]')?.focus();
-      });
-      nav.append(button);
+    const group = groups.find((candidate) => candidate.id === libraryPower) ?? groups[0];
+    if (!group) return;
+    libraryPower = group.id;
+    const grid = el("div", `daily-library-catalog${groups.length > 1 ? " has-nav" : ""}`);
+    if (groups.length > 1) {
+      const nav = el("nav", "daily-library-nav");
+      nav.setAttribute("aria-label", L.title);
+      for (const filterGroup of groups) {
+        const button = el("button", "dailies-lib-btn", filterGroup.title);
+        button.type = "button";
+        button.setAttribute("aria-pressed", String(filterGroup.id === libraryPower));
+        button.addEventListener("click", () => {
+          libraryPower = filterGroup.id;
+          buildLib();
+          lib.querySelector('.daily-library-nav [aria-pressed="true"]')?.focus();
+        });
+        nav.append(button);
+      }
+      grid.append(nav);
     }
-    grid.append(nav);
-    lib.append(grid);
-    for (const group of groups.filter((group) => group.id === libraryPower)) {
-      const box = el("div", "dailies-col dailies-lib-col");
-      box.append(el("h3", "", group.title));
+    const box = el("div", "daily-library-rows");
+    const filterRows = () => {
+      const query = libraryQuery.trim().toLocaleLowerCase("ru");
+      for (const row of box.querySelectorAll(".daily-library-entry")) {
+        row.hidden = (libraryPickedOnly && row.querySelector(".dailies-lib-row").getAttribute("aria-pressed") !== "true")
+          || Boolean(query && !row.textContent.toLocaleLowerCase("ru").includes(query));
+      }
+    };
+    if (unlocked.size > 1) {
       const controls = el("div", "daily-library-controls");
       const search = el("input", "daily-library-search");
       search.type = "search";
@@ -1116,26 +1144,6 @@ function createDailies(box, ctx) {
       pickedFilter.setAttribute("aria-pressed", String(libraryPickedOnly));
       controls.append(search, pickedFilter);
       box.append(controls);
-      for (const task of group.tasks.filter((task) => unlocked.has(task.id))) {
-        const on = picked.includes(task.id);
-        const locked = on && state.done.includes(task.id);
-        const row = el("button", `dailies-task dailies-lib-row${on ? " on" : ""}`);
-        row.type = "button";
-        row.append(el("span", "dailies-lib-mark", on ? "✓" : "+"), el("span", "dailies-task-name", task.name), el("span", "dailies-lib-hint", on ? L.inSet : L.available));
-        row.setAttribute("aria-pressed", String(on));
-        row.disabled = state.closed || locked || (!on && total >= pick.max);
-        if (locked) row.title = L.locked ?? "";
-        else if (task.check) row.title = `Чем проверить: ${task.check}`;
-        row.addEventListener("click", () => togglePick(task.id));
-        box.append(row);
-      }
-      const filterRows = () => {
-        const query = libraryQuery.trim().toLocaleLowerCase("ru");
-        for (const row of box.querySelectorAll(".dailies-lib-row")) {
-          row.hidden = (libraryPickedOnly && row.getAttribute("aria-pressed") !== "true")
-            || Boolean(query && !row.textContent.toLocaleLowerCase("ru").includes(query));
-        }
-      };
       search.addEventListener("input", () => {
         libraryQuery = search.value;
         filterRows();
@@ -1145,18 +1153,46 @@ function createDailies(box, ctx) {
         pickedFilter.setAttribute("aria-pressed", String(libraryPickedOnly));
         filterRows();
       });
-      filterRows();
-      grid.append(box);
+    }
+    for (const task of group.tasks.filter((candidate) => unlocked.has(candidate.id))) {
+      const on = picked.includes(task.id);
+      const locked = on && state.done.includes(task.id);
+      const entry = el("div", "daily-library-entry");
+      const action = el("button", `dailies-lib-row${on ? " on" : ""}`, on ? `✓ ${L.inSet}` : L.add);
+      action.type = "button";
+      action.dataset.libraryTask = task.id;
+      action.setAttribute("aria-pressed", String(on));
+      action.setAttribute("aria-label", `${on ? L.inSet : L.add} · ${task.name}`);
+      action.disabled = state.closed || locked || (!on && total >= pick.max);
+      if (locked) action.title = L.locked ?? "";
+      else if (on) action.title = L.remove ?? "";
+      else if (task.check) action.title = `Чем проверить: ${task.check}`;
+      action.addEventListener("click", () => togglePick(task.id));
+      entry.append(el("span", "", group.title), el("strong", "", task.name), action);
+      box.append(entry);
+    }
+    if (unlocked.size > 1) filterRows();
+    grid.append(box);
+    lib.append(grid);
+    grid.scrollTop = scrollTop;
+    if (activeTask) {
+      const action = [...box.querySelectorAll("[data-library-task]")].find((button) => button.dataset.libraryTask === activeTask);
+      const next = action?.getClientRects().length ? action : box.querySelector(".daily-library-controls button");
+      next?.focus({ preventScroll: true });
     }
   }
   // библиотека — отдельным входом (автор, 27.10): окно заданий как было, кнопка открывает библиотеку на его месте
   const setLib = (open) => {
     if (open) cards.close(false);
     if (open && board.classList.contains("weak-open")) setWeak(false);
-    if (open) board.classList.remove("yday-open");
+    if (open && board.classList.contains("yday-open")) setYday(false);
     board.classList.toggle("lib-open", open);
     libBtn.setAttribute("aria-expanded", open ? "true" : "false");
-    libBtn.textContent = open ? L.close ?? "" : L.open ?? "";
+    libBtn.textContent = L.open ?? "";
+    if (open) {
+      buildLib();
+      libraryBack.focus({ preventScroll: true });
+    }
   };
   libBtn.addEventListener("click", () => setLib(!board.classList.contains("lib-open")));
   setLib(false);
@@ -1237,7 +1273,7 @@ function createDailies(box, ctx) {
   function setWeak(open) {
     if (open) cards.close(false);
     if (open) setLib(false);
-    if (open) board.classList.remove("yday-open");
+    if (open && board.classList.contains("yday-open")) setYday(false);
     board.classList.toggle("weak-open", open);
     weakBtn.setAttribute("aria-expanded", open ? "true" : "false");
     weakBtn.textContent = open ? L.close ?? "" : WK.open ?? "";
@@ -1248,7 +1284,25 @@ function createDailies(box, ctx) {
   // ---------- вчерашний день: дописать и сдать до 12:00 ----------
   const YD = t.yesterday ?? {};
   const yday = el("div", "dailies-yday");
+  const ydayHead = el("div", "dailies-lib-head");
+  const ydayTitle = el("h3", "");
+  ydayHead.append(ydayTitle, el("span", "dailies-lib-count", YD.until ?? ""));
+  const ydayList = el("div", "dailies-yday-list");
+  yday.append(ydayHead, el("p", "dailies-yday-hint", YD.hint ?? ""), ydayList);
   cols.append(yday);
+  const ydayFoot = el("div", "dailies-yday-foot");
+  const ydayCount = el("strong", "dailies-yday-count");
+  ydayCount.setAttribute("aria-live", "polite");
+  const ydayRest = el("button", "dailies-yday-rest", YD.couldnt ?? "");
+  ydayRest.type = "button";
+  ydayRest.title = YD.couldntHint ?? "";
+  ydayRest.addEventListener("click", restYesterday);
+  const ydaySend = el("button", "dailies-submit dailies-yday-send", YD.send ?? "");
+  ydaySend.type = "button";
+  ydaySend.addEventListener("click", submitYesterday);
+  ydayFoot.append(ydayCount, ydayRest, ydaySend);
+  board.append(ydayFoot);
+
   const ydayLabel = (key) => {
     const [y, m, d] = String(key).split("-").map(Number);
     return new Date(y, (m || 1) - 1, d || 1).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
@@ -1266,57 +1320,53 @@ function createDailies(box, ctx) {
   function buildYday() {
     const P = state.pending;
     ydayBtn.hidden = !P;
-    if (!P) {
-      board.classList.remove("yday-open");
-      yday.replaceChildren();
-      return;
-    }
+    if (!P) board.classList.remove("yday-open");
     const open = board.classList.contains("yday-open");
     ydayBtn.textContent = open ? YD.back ?? "" : (YD.button ?? "").replace(/^⧗\s*/, "");
     ydayBtn.classList.toggle("on", open);
-    yday.replaceChildren();
-    const head = el("div", "dailies-lib-head");
-    head.append(el("h3", "", fill(YD.title, { date: ydayLabel(P.day) })), el("span", "dailies-lib-count", YD.until ?? ""));
-    yday.append(head, el("p", "dailies-yday-hint", YD.hint ?? ""));
-    const list = el("div", "dailies-yday-list");
+    ydayBtn.setAttribute("aria-expanded", String(open));
+    if (!P || !open) return;
+
+    ydayTitle.textContent = fill(YD.title, { date: ydayLabel(P.day) });
+    const scrollTop = ydayList.scrollTop;
+    const active = document.activeElement;
+    const focusKey = ydayList.contains(active) ? active.dataset.ydayControl : null;
     const picked = (P.picked ?? []).filter((id) => byId[id]);
+    const rows = document.createDocumentFragment();
     for (const group of data.groups) {
-      const tasks = group.tasks.filter((task) => picked.includes(task.id));
-      if (!tasks.length) continue;
-      const col = el("div", "dailies-col");
-      col.append(el("h3", "", group.title));
-      for (const task of tasks) col.append(yesterdayRow(P, task));
-      list.append(col);
+      for (const task of group.tasks) {
+        if (picked.includes(task.id)) rows.append(yesterdayRow(P, group.title, task));
+      }
     }
-    yday.append(list);
+    ydayList.replaceChildren(rows);
+    ydayList.scrollTop = scrollTop;
+    if (focusKey) {
+      const controls = [...ydayList.querySelectorAll("[data-yday-control]")];
+      controls.find((control) => control.dataset.ydayControl === focusKey)?.focus({ preventScroll: true });
+    }
     const marked = Object.keys(P.markedSets ?? {}).filter((id) => P.markedSets[id] > 0);
     const n = new Set([...P.done, ...(P.marked ?? []), ...marked]).size;
-    const foot2 = el("div", "dailies-yday-foot");
-    const send = el("button", "dailies-submit dailies-yday-send", fill(YD.send, { n, of: picked.length }));
-    send.type = "button";
-    send.addEventListener("click", submitYesterday);
-    const couldnt = el("button", "dailies-yday-rest", YD.couldnt ?? "");
-    couldnt.type = "button";
-    couldnt.title = YD.couldntHint ?? "";
-    couldnt.addEventListener("click", restYesterday);
-    foot2.append(couldnt, send);
-    yday.append(foot2);
+    ydayCount.textContent = fill(YD.count, { n, of: picked.length });
   }
 
-  function yesterdayRow(P, task) {
+  function yesterdayRow(P, power, task) {
     const id = task.id;
     const plan = P.setPlan?.[id];
+    const name = plan ? `${plan.name} · ${t.sets.per} ${plan.n} ${plan.unit ?? ""}` : task.name;
+    const row = el("div", "dailies-yday-row");
+    const actions = el("div", "dailies-yday-actions");
+    row.append(el("span", "dailies-yday-power", power), el("strong", "dailies-yday-name", name), actions);
     if (plan) {
       const original = P.sets[id] ?? 0;
       const extra = P.markedSets?.[id] ?? 0;
-      const row = el("div", "dailies-yday-set");
-      row.append(el("span", "", `${plan.name} · ${t.sets.per} ${plan.n} ${plan.unit ?? ""}`));
       const dots = el("div", "dailies-dots");
       const roman = ["I", "II", "III", "IV", "V"];
       for (let i = 0; i < Math.max(original, plan.gains.length); i++) {
         const dot = el("button", `yday-set${i < original + extra ? " on" : ""}`, roman[i]);
         dot.type = "button";
         dot.disabled = i < original || (i !== original + extra && i !== original + extra - 1);
+        dot.dataset.ydayControl = `${id}:${i}`;
+        dot.setAttribute("aria-label", `${name} · ${roman[i]}`);
         dot.setAttribute("aria-pressed", String(i < original + extra));
         dot.addEventListener("click", () => {
           P.markedSets ??= {};
@@ -1326,22 +1376,25 @@ function createDailies(box, ctx) {
         });
         dots.append(dot);
       }
-      row.append(dots);
+      actions.append(dots);
       return row;
     }
     const was = P.done.includes(id);
-    const row = el("label", `dailies-task dailies-yday-row${was ? " was" : ""}`);
+    const mark = el("label", "dailies-task dailies-yday-mark");
     const box2 = el("input");
     box2.type = "checkbox";
     box2.checked = was || (P.marked ?? []).includes(id);
     box2.disabled = was;
+    box2.dataset.ydayControl = id;
+    box2.setAttribute("aria-label", was ? `${name} · ${YD.was}` : name);
     box2.addEventListener("change", () => {
       P.marked = box2.checked ? [...new Set([...(P.marked ?? []), id])] : (P.marked ?? []).filter((x) => x !== id);
       saveDailiesState(state);
       buildYday();
     });
-    row.append(box2, el("span", "dailies-task-name", task.name));
-    if (was) row.append(el("span", "dailies-yday-was", YD.was ?? ""));
+    mark.classList.toggle("is-checked", box2.checked);
+    mark.append(box2, el("span", "", box2.checked ? YD.marked : YD.mark));
+    actions.append(mark);
     return row;
   }
   // сдать вчера: дописанные дела дают то же, что дали бы вчера (опыт, сила, Воля), плюс Воля за цвет дня
