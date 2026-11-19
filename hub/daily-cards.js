@@ -38,14 +38,159 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
   let trigger = null;
   const entries = new Map();
   const pointerShine = window.matchMedia("(any-hover: hover) and (prefers-reduced-motion: no-preference)");
+  const journalOverlay = element("div", "daily-journal-overlay");
+  journalOverlay.hidden = true;
+  const journal = element("section", "daily-journal");
+  journal.setAttribute("role", "dialog");
+  journal.setAttribute("aria-modal", "true");
+  journal.setAttribute("aria-labelledby", "daily-journal-title");
+  const journalHeader = element("header", "daily-journal-header");
+  const journalTitle = element("h3", "", texts.journalTitle);
+  journalTitle.id = "daily-journal-title";
+  journalTitle.tabIndex = -1;
+  const journalCount = element("span", "daily-journal-count");
+  const journalClose = element("button", "daily-journal-close", "×");
+  journalClose.type = "button";
+  journalClose.setAttribute("aria-label", texts.journalClose);
+  journalHeader.append(journalTitle, journalCount, journalClose);
+  const journalBody = element("div", "daily-journal-body");
+  const journalTable = element("table", "daily-journal-table");
+  journalTable.setAttribute("aria-labelledby", journalTitle.id);
+  const columns = element("colgroup", "");
+  for (const name of ["power", "name", "actions", "open"]) columns.append(element("col", `daily-journal-col-${name}`));
+  const journalRows = element("tbody", "");
+  journalTable.append(columns, journalRows);
+  const journalEmpty = element("div", "daily-journal-empty");
+  const journalBack = element("button", "daily-journal-back", texts.journalBack);
+  journalBack.type = "button";
+  journalEmpty.append(element("p", "", texts.journalEmpty), journalBack);
+  journalBody.append(journalTable, journalEmpty);
+  journal.append(journalHeader, journalBody);
+  journalOverlay.append(journal);
+  document.body.append(journalOverlay);
+  let journalTrigger = null;
+  let returnToJournal = false;
 
-  function close(restoreFocus = true) {
+  const plural = (count, forms) => forms[count % 100 >= 11 && count % 100 <= 14 ? "many"
+    : count % 10 === 1 ? "one" : count % 10 >= 2 && count % 10 <= 4 ? "few" : "many"];
+
+  function closeJournal(restoreFocus = true) {
+    if (journalOverlay.hidden) return;
+    journalOverlay.hidden = true;
+    journalTrigger?.setAttribute("aria-expanded", "false");
+    if (restoreFocus && journalTrigger?.isConnected) journalTrigger.focus();
+  }
+
+  function fitJournal() {
+    if (journalOverlay.hidden) return;
+    const frame = journalTrigger?.closest(".modal-quests-day")?.getBoundingClientRect();
+    const scale = Math.min(Math.max((frame?.width ?? 1044) / 1536, .6), (window.innerWidth - 24) / 1170);
+    journalOverlay.style.setProperty("--journal-u", `${scale}px`);
+  }
+
+  function drawJournal() {
+    if (journalOverlay.hidden) return;
+    const focused = journal.contains(document.activeElement) ? document.activeElement?.dataset.journalAction : null;
+    const scrollTop = journalBody.scrollTop;
+    const taken = [...entries].filter(([, entry]) => entry.info?.taken && entry.info.count && entry.rows);
+    const fragment = document.createDocumentFragment();
+    let taskCount = 0;
+    for (const [id, entry] of taken) {
+      const taskRows = [...entry.rows.querySelectorAll(":scope > .dailies-task")];
+      for (const [index, source] of taskRows.entries()) {
+        taskCount++;
+        const row = element("tr", "daily-journal-row");
+        row.dataset.power = id;
+        const power = element("td", "daily-journal-power");
+        const powerLabel = element("span", "daily-journal-power-label");
+        const glyph = element("i", "daily-journal-glyph");
+        glyph.setAttribute("aria-hidden", "true");
+        glyph.style.setProperty("--face-position", entry.face.style.getPropertyValue("--face-position"));
+        powerLabel.append(glyph, element("span", "", entry.group.title));
+        power.append(powerLabel);
+        const sourceName = source.querySelector(".dailies-task-name");
+        const name = source.classList.contains("dailies-sets") ? sourceName?.firstElementChild?.textContent : sourceName?.textContent;
+        const nameCell = element("td", "daily-journal-name", name ?? "");
+        const actions = element("td", "daily-journal-actions");
+        const actionBox = element("div", "daily-journal-actions-inner");
+        const dots = [...source.querySelectorAll(".dailies-dot")];
+        for (const [dotIndex, dot] of dots.entries()) {
+          const button = element("button", `daily-journal-approach${dot.classList.contains("on") ? " on" : ""}`, dot.textContent);
+          button.type = "button";
+          button.disabled = dot.disabled;
+          button.dataset.journalAction = `${id}:${index}:set:${dotIndex}`;
+          button.setAttribute("aria-label", dot.getAttribute("aria-label") ?? `${name} · ${dot.textContent}`);
+          button.addEventListener("click", () => dot.click());
+          actionBox.append(button);
+        }
+        const check = source.querySelector('input[type="checkbox"]');
+        if (check) {
+          const button = element("button", `daily-journal-mark${check.checked ? " done" : ""}`);
+          button.type = "button";
+          button.disabled = check.disabled;
+          button.dataset.journalAction = `${id}:${index}:check`;
+          button.setAttribute("aria-pressed", String(check.checked));
+          button.setAttribute("aria-label", `${check.checked ? texts.journalMarked : texts.journalMark} · ${name}`);
+          const icon = element("i", "", check.checked ? "✓" : "");
+          icon.setAttribute("aria-hidden", "true");
+          button.append(icon, element("span", "", check.checked ? texts.journalMarked : texts.journalMark));
+          button.addEventListener("click", () => {
+            if (check.disabled) return;
+            check.checked = !check.checked;
+            check.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+          actionBox.append(button);
+        }
+        actions.append(actionBox);
+        const openCell = element("td", "daily-journal-open-cell");
+        const openButton = element("button", "daily-journal-open-card", "›");
+        openButton.type = "button";
+        openButton.dataset.journalAction = `${id}:${index}:open`;
+        openButton.setAttribute("aria-label", `${texts.journalOpenCard} · ${entry.group.title}`);
+        openButton.addEventListener("click", () => open(id, journalTrigger, false, true));
+        openCell.append(openButton);
+        row.append(power, nameCell, actions, openCell);
+        fragment.append(row);
+      }
+    }
+    journalRows.replaceChildren(fragment);
+    journalCount.textContent = `${taken.length} ${plural(taken.length, texts.journalCards)} · ${taskCount} ${plural(taskCount, texts.tasks)}`;
+    journalTable.hidden = !taskCount;
+    journalEmpty.hidden = Boolean(taskCount);
+    journalBody.scrollTop = scrollTop;
+    if (focused) {
+      const next = [...journal.querySelectorAll("[data-journal-action]")].find(button => button.dataset.journalAction === focused && !button.disabled);
+      (next ?? journalTitle).focus({ preventScroll: true });
+    }
+  }
+
+  function openJournal(source = journalTrigger) {
+    journalTrigger = source;
+    returnToJournal = false;
+    closeCard(false);
+    journalOverlay.hidden = false;
+    journalTrigger?.setAttribute("aria-expanded", "true");
+    fitJournal();
+    drawJournal();
+    journalClose.focus();
+  }
+
+  function closeCard(restoreFocus = true) {
     if (overlay.hidden) return;
     overlay.hidden = true;
     rows.replaceChildren();
     active = null;
-    if (restoreFocus && trigger?.isConnected) trigger.focus();
+    const reopen = returnToJournal;
+    returnToJournal = false;
+    if (restoreFocus && reopen) openJournal();
+    else if (restoreFocus && trigger?.isConnected) trigger.focus();
     trigger = null;
+  }
+
+  function close(restoreFocus = true) {
+    returnToJournal = false;
+    closeCard(restoreFocus);
+    closeJournal(restoreFocus);
   }
 
   function draw() {
@@ -66,8 +211,10 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     }
   }
 
-  function open(id, source = null, focusTurn = false) {
+  function open(id, source = null, focusTurn = false, fromJournal = false) {
     if (!entries.get(id)?.info?.count) return;
+    closeJournal(false);
+    returnToJournal = fromJournal;
     active = id;
     trigger = source;
     overlay.hidden = false;
@@ -109,13 +256,13 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     title.focus();
   });
   overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) close();
+    if (event.target === overlay) closeCard();
   });
   overlay.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
-      close();
+      closeCard();
     }
     if (event.key !== "Tab") return;
     const buttons = [...card.querySelectorAll("button:not(:disabled), input:not(:disabled)")]
@@ -131,10 +278,33 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
     }
   });
 
+  journalClose.addEventListener("click", () => closeJournal());
+  journalBack.addEventListener("click", () => closeJournal());
+  journalOverlay.addEventListener("click", event => {
+    if (event.target === journalOverlay) closeJournal();
+  });
+  document.addEventListener("keydown", event => {
+    if (journalOverlay.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeJournal();
+    } else if (event.key === "Tab") {
+      const buttons = [...journal.querySelectorAll("button:not(:disabled)")].filter(button => button.getClientRects().length);
+      const first = buttons[0], last = buttons.at(-1);
+      if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus();
+      }
+    }
+  }, { capture: true });
+  window.addEventListener("resize", () => requestAnimationFrame(fitJournal));
+
   return {
     grid,
     overlay,
     open,
+    openJournal,
     close,
     setRows(id, groupRows) {
       entries.get(id).rows = groupRows;
@@ -153,6 +323,7 @@ export function createDailyCards(groups, texts, onTake, previewRarities = []) {
       }
       if (active && !entries.get(active).info.count) close(false);
       else draw();
+      drawJournal();
     },
   };
 }

@@ -699,19 +699,27 @@ function createDailies(box, ctx) {
   const path = el("div", "daily-card-path");
   path.append(el("strong", "", t.cards.path));
   const pathCounts = Object.fromEntries(["day", "week", "month"].map((kind) => {
-    const entry = el("div", "daily-card-path-entry");
+    const entry = el(kind === "day" ? "button" : "div", `daily-card-path-entry${kind === "day" ? " daily-path-day" : ""}`);
     const label = el("span", "", ctx.texts.quests.tabs[kind]);
     const progress = el("progress", "");
     progress.max = 1;
     progress.value = 0;
     progress.setAttribute("aria-label", ctx.texts.quests.tabs[kind]);
     entry.append(label, progress);
+    if (kind === "day") {
+      entry.type = "button";
+      entry.setAttribute("aria-expanded", "false");
+      entry.setAttribute("aria-haspopup", "dialog");
+      entry.append(el("small", "daily-path-day-hint", t.cards.journalOpen));
+      entry.addEventListener("click", () => cards.openJournal(entry));
+    }
     path.append(entry);
-    return [kind, { label, progress }];
+    return [kind, { label, progress, entry }];
   }));
   function pathCount(kind, done, count) {
     const { label, progress } = pathCounts[kind];
     label.textContent = `${ctx.texts.quests.tabs[kind]} · ${done}/${count}`;
+    if (kind === "day") pathCounts.day.entry.setAttribute("aria-label", `${t.cards.journalOpen}: ${label.textContent}`);
     progress.max = Math.max(1, count);
     progress.value = done;
   }

@@ -412,7 +412,7 @@
   height: 52px;
 }
 
-.modal-backdrop.ph-modal:has(.modal-health-overview) {
+.modal-backdrop.ph-modal:has(.modal-health-overview, .modal-quests-day) {
   z-index: 3100;
 }
 
@@ -421,30 +421,31 @@
   .daily-card-detail { width: min(100%, 560px); }
 }
 
-/* Позиции окна «День» сняты с утверждённого макета 1448 × 1086. */
+/* Утверждённый чистый каркас недели 1536 × 1024 с шестью картами дня. */
 .wood.modal.modal-art.modal-quests-day {
-  width: 1448px;
-  height: 1086px;
-  background-image: url("/assets/hub/ui/quests/daily-shell.jpg");
-  zoom: .72;
+  width: 1536px;
+  height: 1024px;
+  background-image: url("/assets/hub/ui/quests/bg_quests.jpg");
+  zoom: .68;
 }
-.ph-modal .wood.modal.modal-art.modal-quests-day { zoom: var(--ph-quests-day-zoom, .5); }
-.wood.modal.modal-quests-day::before,
-.wood.modal.modal-quests-day::after { display: none; }
+.ph-modal .wood.modal.modal-art.modal-quests-day { zoom: var(--ph-art-zoom, .5); }
+.wood.modal.modal-quests-day::before { display: none; }
+.wood.modal.modal-quests-day::after { display: block; }
+.ph-modal .wood.modal.modal-quests-day::after { display: none; }
 .modal-quests-day #modal-title {
-  left: 474px;
-  top: 29px;
-  width: 500px;
-  height: 78px;
-  opacity: 0;
+  left: 545px;
+  top: 6px;
+  width: 450px;
+  height: 74px;
+  opacity: 1;
   pointer-events: none;
 }
 .wood.modal-quests-day .modal-close,
 .ph-modal .wood.modal-quests-day .modal-close {
-  left: 1325px;
-  top: 29px;
-  width: 84px;
-  height: 84px;
+  left: 1442px;
+  top: 12px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
 }
 .wood.modal-quests-day .modal-close,
@@ -457,48 +458,48 @@
   border: 0;
   box-shadow: none;
 }
+.wood.modal-quests-day .modal-close,
+.ph-modal .wood.modal-quests-day .modal-close { color: var(--gold); }
 .modal-quests-day .qb-tab,
-.modal-quests-day .qb-tab.on { top: 208px; width: 157px; height: 56px; }
-.modal-quests-day .qb-tab:nth-child(1) { left: 148px; }
-.modal-quests-day .qb-tab:nth-child(2) { left: 313px; }
-.modal-quests-day .qb-tab:nth-child(3) { left: 476px; }
-.modal-quests-day .qb-term { left: 1085px; top: 213px; width: 231px; height: 49px; }
+.modal-quests-day .qb-tab.on {
+  top: 200px;
+  width: 156px;
+  height: 62px;
+  color: #e3b860;
+  font: 400 22px/1 var(--font-text);
+  background: url("/assets/hub/ui/quests/qb_tab.png") center / 100% 100% no-repeat;
+}
+.modal-quests-day .qb-tab.on {
+  color: #ffe3a3;
+  font-weight: 700;
+  background-image: radial-gradient(ellipse 60% 70% at 50% 50%, rgba(255, 190, 90, .3), transparent 75%), url("/assets/hub/ui/quests/qb_tab.png");
+}
+.modal-quests-day .qb-tab:nth-child(1) { left: 136px; }
+.modal-quests-day .qb-tab:nth-child(2) { left: 300px; }
+.modal-quests-day .qb-tab:nth-child(3) { left: 464px; }
+.modal-quests-day .qb-term { left: 1172px; top: 212px; width: 248px; height: 48px; }
 .modal-quests-day .qb-term b { font: 400 23px var(--font-text); color: #f4d494; }
 
-.modal-quests-day .dailies-board.in-quests { width: 1448px; height: 1086px; }
-/* Чистые участки леса и камня из существующих фонов. Кнопки поверх них рисует интерфейс. */
+.modal-quests-day .dailies-board.in-quests { width: 1536px; height: 1024px; }
 .modal-quests-day .in-quests::before,
-.modal-quests-day .in-quests::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-}
-.modal-quests-day .in-quests::before {
-  left: 872px;
-  top: 196px;
-  width: 213px;
-  height: 75px;
-  background: url("/assets/hub/ui/quests/bg_quests.jpg") -944px -197px no-repeat;
-  mask-image: linear-gradient(to right, transparent, #000 26px, #000 calc(100% - 12px), transparent),
-    linear-gradient(to bottom, transparent, #000 21px, #000 calc(100% - 12px), transparent);
-  mask-composite: intersect;
-}
-.modal-quests-day .in-quests::after {
-  left: 978px;
-  top: 885px;
-  width: 212px;
-  height: 59px;
-  background: url("/assets/hub/ui/quests/daily-shell.jpg") -740px -885px no-repeat;
-  mask-image: linear-gradient(to right, transparent, #000 5px, #000 calc(100% - 5px), transparent),
-    linear-gradient(to bottom, transparent, #000 5px, #000 calc(100% - 5px), transparent);
-  mask-composite: intersect;
-}
-.modal-quests-day .in-quests .dailies-health-shortcut { left: 1039px; right: auto; top: 47px; width: 229px; height: 45px; }
-.modal-quests-day .in-quests > .dailies-yday-btn {
-  left: 900px;
+.modal-quests-day .in-quests::after { display: none; }
+.modal-quests-day .in-quests .dailies-health-shortcut {
+  left: 1135px;
   right: auto;
-  top: 217px;
-  width: 173px;
+  top: 26px;
+  width: 245px;
+  height: 48px;
+  color: #f1d498;
+  border: 1px solid #a38445;
+  border-radius: 24px;
+  background: #16130de0;
+  font: 400 23px/1 var(--font-text);
+}
+.modal-quests-day .in-quests > .dailies-yday-btn {
+  left: 972px;
+  right: auto;
+  top: 218px;
+  width: 180px;
   height: 41px;
   padding: 0 5px 0 31px;
   border: 0;
@@ -508,9 +509,9 @@
   animation: none;
 }
 .modal-quests-day .in-quests > .dailies-yday-btn.on { padding-left: 12px; background: #1c1710; border: 1px solid #a78149; }
-.modal-quests-day .in-quests .dailies-top { left: 174px; top: 298px; width: 1078px; height: 52px; }
+.modal-quests-day .in-quests .dailies-top { display: contents; }
 .modal-quests-day .in-quests .dailies-wallet {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 16px;
   font: 400 24px var(--font-text);
@@ -518,13 +519,35 @@
 }
 .modal-quests-day .in-quests .dailies-wallet b { color: #edb24f; font: 400 36px var(--font-text); }
 .modal-quests-day .in-quests .dailies-top .dailies-lib-btn {
-  width: 220px;
-  height: 39px;
-  font: 400 19px var(--font-text);
-  border: 1px solid #d1ab69;
-  background: #2e2316;
+  position: absolute;
+  left: 136px;
+  top: 26px;
+  width: 300px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 18px;
+  border: 1px solid #a38445;
+  border-radius: 24px;
+  color: #f1d498;
+  background: #16130de0;
+  font: 400 21px/1 var(--font-text);
 }
-.modal-quests-day .in-quests .dailies-cols { left: 173px; top: 366px; width: 1110px; height: 466px; }
+.modal-quests-day .in-quests .dailies-top .dailies-lib-btn::before {
+  content: "";
+  flex: 0 0 24px;
+  height: 24px;
+  background: url("/assets/hub/icons/book.svg") center / contain no-repeat;
+}
+.modal-quests-day .in-quests .dailies-top .dailies-lib-btn[aria-expanded="true"] {
+  color: #ffe8b8;
+  box-shadow: inset 0 0 12px #d0a14a24;
+}
+.modal-quests-day .in-quests .dailies-cols { left: 218px; top: 312px; width: 1110px; height: 450px; }
+.modal-quests-day .in-quests .dailies-weak { height: 450px; max-height: 450px; }
+.modal-quests-day .in-quests .dailies-weak-card { background: linear-gradient(110deg, #17140f, #1b1711); }
 .modal-quests-day .in-quests .dailies-mine { max-height: none; }
 .modal-quests-day .daily-card-grid {
   grid-template-columns: 181px 10px 176px 10px 175px 9px 178px 8px 175px 11px 176px;
@@ -605,15 +628,43 @@
 .modal-quests-day .daily-card-path {
   grid-template-columns: 312px repeat(3, minmax(0, 1fr));
   width: 1102px;
-  height: 92px;
+  height: 82px;
   box-sizing: border-box;
   gap: 0;
   padding: 0;
-  margin: 28px 0 0;
-  border: 0;
-  background: url("/assets/hub/ui/quests/daily-path.jpg") center / 100% 100% no-repeat;
+  margin: 18px 0 0;
+  position: relative;
+  isolation: isolate;
+  border: 1px solid transparent;
+  border-image: url("/assets/hub/ui/quests/daily-path-frame.png") 28 / 14px stretch;
+  background: transparent;
 }
-.modal-quests-day .daily-card-path > strong { opacity: 0; }
+.modal-quests-day .daily-card-path::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 2px;
+  background: linear-gradient(100deg, #0d0f0b, #14140e 48%, #0d0f0b);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+}
+.modal-quests-day .daily-card-path > strong {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-left: 22px;
+  color: #ecd39b;
+  opacity: 1;
+  white-space: nowrap;
+  font: 400 26px/1 var(--font-title);
+}
+.modal-quests-day .daily-card-path > strong::before {
+  content: "";
+  flex: 0 0 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: url("/assets/hub/ui/quests/daily-path-medallion.png") center / contain no-repeat;
+  mix-blend-mode: screen;
+}
 .modal-quests-day .daily-card-path-entry {
   justify-items: center;
   padding: 0;
@@ -621,7 +672,6 @@
   border-color: #80613b80;
   font: 400 22px/1.12 var(--font-text);
 }
-.modal-quests-day .daily-card-path-entry:nth-child(2) { border: 0; }
 .modal-quests-day .daily-card-path-entry progress {
   appearance: none;
   width: 72%;
@@ -633,11 +683,132 @@
 }
 .modal-quests-day .daily-card-path-entry progress::-webkit-progress-bar { background: #100b06; }
 .modal-quests-day .daily-card-path-entry progress::-webkit-progress-value { background: linear-gradient(#fbe4a6, #b4711e); border-radius: 8px; }
-.modal-quests-day .in-quests .dailies-yellow { left: 275px; top: 891px; width: 396px; height: 47px; padding: 0; justify-content: flex-end; }
-.modal-quests-day .in-quests .dailies-yellow h3,
+
+/* Дневной прогресс открывает общий список взятых заданий. */
+.modal-quests-day .daily-card-path-entry.daily-path-day {
+  appearance: none;
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  align-content: center;
+  gap: 5px;
+  border-radius: 3px;
+  color: #ffe2a0;
+  background: linear-gradient(180deg, #bc8e3e13, transparent);
+  cursor: pointer;
+}
+.daily-path-day > span { font-weight: 600; }
+.daily-path-day-hint { color: #d7bb7e; font: 400 15px/1 var(--font-text); }
+.daily-path-day-hint::after { content: " ›"; padding-left: 4px; color: #e0ad52; }
+.modal-quests-day .daily-path-day:is(:hover, :focus-visible, [aria-expanded="true"]) {
+  background: linear-gradient(180deg, #c79a4c25, #c79a4c08);
+  box-shadow: inset 0 0 14px #dcac4b12;
+}
+.modal-quests-day .daily-path-day:focus-visible { outline: 1px solid #cba356; outline-offset: -4px; }
+
+.daily-journal-overlay {
+  --journal-u: .68px;
+  position: fixed;
+  z-index: 3200;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: #090906ad;
+}
+.daily-journal-overlay[hidden], .daily-journal [hidden] { display: none; }
+.daily-journal {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: calc(1170 * var(--journal-u));
+  height: calc(400 * var(--journal-u));
+  max-height: calc(100vh - 24px);
+  padding: calc(26 * var(--journal-u)) calc(29 * var(--journal-u));
+  border: calc(1 * var(--journal-u)) solid transparent;
+  border-image: url("/assets/hub/ui/quests/daily-path-frame.png") 28 / calc(16 * var(--journal-u)) stretch;
+  color: #e9d7ad;
+  font: 400 calc(20 * var(--journal-u))/1.2 var(--font-text);
+  box-shadow: 0 calc(14 * var(--journal-u)) calc(50 * var(--journal-u)) #000b;
+  isolation: isolate;
+  overflow: hidden;
+}
+.daily-journal::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: calc(2 * var(--journal-u));
+  background: linear-gradient(110deg, #211c12, #16140e);
+  clip-path: polygon(1.2% 0, 98.8% 0, 100% 3.5%, 100% 96.5%, 98.8% 100%, 1.2% 100%, 0 96.5%, 0 3.5%);
+}
+.daily-journal-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: calc(14 * var(--journal-u));
+  height: calc(40 * var(--journal-u));
+  box-sizing: border-box;
+  padding: 0 calc(8 * var(--journal-u)) calc(6 * var(--journal-u));
+  border-bottom: calc(1 * var(--journal-u)) solid #98753d;
+}
+.daily-journal-header h3 { margin: 0; color: #efd39a; font: 400 calc(26 * var(--journal-u))/1 var(--font-title); }
+.daily-journal-count { margin-left: auto; color: #b8a580; white-space: nowrap; font-size: calc(17 * var(--journal-u)); }
+.daily-journal-close {
+  appearance: none;
+  flex: none;
+  width: calc(32 * var(--journal-u));
+  height: calc(32 * var(--journal-u));
+  display: grid;
+  place-items: center;
+  border: calc(1 * var(--journal-u)) solid #8e743e;
+  border-radius: 50%;
+  color: #e4c488;
+  background: #16130d;
+  font: 400 calc(24 * var(--journal-u))/1 var(--font-text);
+}
+.daily-journal-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #97703a transparent; }
+.daily-journal-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.daily-journal-col-power { width: calc(197 * var(--journal-u)); }
+.daily-journal-col-actions { width: calc(284 * var(--journal-u)); }
+.daily-journal-col-open { width: calc(40 * var(--journal-u)); }
+.daily-journal-row { height: calc(48 * var(--journal-u)); border-bottom: calc(1 * var(--journal-u)) solid #77613d55; }
+.daily-journal-row td { padding: 0 calc(6 * var(--journal-u)); vertical-align: middle; }
+.daily-journal-power-label { display: flex; align-items: center; gap: calc(9 * var(--journal-u)); color: #ceb27a; font-size: calc(17 * var(--journal-u)); }
+.daily-journal-glyph { flex: none; width: calc(36 * var(--journal-u)); height: calc(36 * var(--journal-u)); border-radius: 50%; background: url("/assets/hub/ui/quests/daily-card-emblems.jpg") var(--face-position) center / 600% 100% no-repeat; }
+.daily-journal-name { color: #ebd9b1; overflow-wrap: anywhere; }
+.daily-journal-actions-inner { display: flex; align-items: center; justify-content: center; gap: calc(6 * var(--journal-u)); }
+.daily-journal-approach {
+  appearance: none;
+  flex: none;
+  width: calc(36 * var(--journal-u));
+  height: calc(30 * var(--journal-u));
+  border: calc(1 * var(--journal-u)) solid #8d703c;
+  border-radius: calc(2 * var(--journal-u));
+  color: #bba36c;
+  background: transparent;
+  font: 400 calc(18 * var(--journal-u))/1 var(--font-title);
+}
+.daily-journal-approach.on { color: #21170a; border-color: #e9c87c; background: linear-gradient(#f0d28d, #b87e2d); }
+.daily-journal-approach:disabled:not(.on) { opacity: .65; cursor: default; }
+.daily-journal-mark { appearance: none; display: flex; align-items: center; justify-content: center; gap: calc(9 * var(--journal-u)); width: calc(150 * var(--journal-u)); height: calc(32 * var(--journal-u)); color: #cfbd96; font: 400 calc(18 * var(--journal-u))/1 var(--font-text); }
+.daily-journal-mark i { display: grid; place-items: center; flex: none; width: calc(21 * var(--journal-u)); height: calc(21 * var(--journal-u)); border: calc(1 * var(--journal-u)) solid #a68b50; border-radius: calc(2 * var(--journal-u)); font-style: normal; }
+.daily-journal-mark.done { color: #9fc47c; }
+.daily-journal-mark.done i { border-color: #8db067; }
+.daily-journal-mark:disabled { opacity: .7; cursor: default; }
+.daily-journal-open-card { appearance: none; width: 100%; color: #dbb979; font: 400 calc(32 * var(--journal-u))/1 var(--font-text); }
+.daily-journal-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(20 * var(--journal-u)); height: 100%; text-align: center; color: #beaa80; }
+.daily-journal-empty p { margin: 0; max-width: 80%; }
+.daily-journal-back { padding: calc(8 * var(--journal-u)) calc(20 * var(--journal-u)); border: 1px solid #92723e; border-radius: 3px; color: #edd399; }
+.daily-journal button:focus-visible { outline: calc(2 * var(--journal-u)) solid #ffe6a8; outline-offset: calc(2 * var(--journal-u)); }
+
+.modal-quests-day .in-quests .dailies-yellow { left: 300px; top: 840px; width: 450px; height: 72px; padding: 0; justify-content: space-between; }
+.modal-quests-day .in-quests .dailies-yellow h3 { display: block; font: 400 24px var(--font-text); }
 .modal-quests-day .in-quests .dailies-weak-sum { display: none; }
 .modal-quests-day .in-quests .dailies-weak-btn { width: 223px; height: 38px; font: 400 21px var(--font-text); }
-.modal-quests-day .in-quests .dailies-foot { z-index: 1; left: 730px; top: 884px; width: 455px; height: 60px; justify-content: space-between; gap: 0; }
+.modal-quests-day .in-quests .dailies-foot { z-index: 1; left: 800px; top: 846px; width: 445px; height: 60px; justify-content: space-between; gap: 0; }
 .modal-quests-day .daily-card-wallet-result { width: 235px; font: 400 20px/1.1 var(--font-text); }
 .modal-quests-day .daily-card-wallet-result strong { font: 400 27px/1.1 var(--font-text); }
 .modal-quests-day .in-quests .dailies-foot .dailies-submit {
@@ -646,7 +817,7 @@
   border-radius: 5px;
   font: 400 24px var(--font-text);
 }
-.modal-quests-day .in-quests .dailies-admin { left: 195px; top: 985px; gap: 18px; }
+.modal-quests-day .in-quests .dailies-admin { left: 228px; top: 942px; gap: 18px; }
 .modal-quests-day .dailies-admin-label { color: #dfc099; font: 400 19px var(--font-text); letter-spacing: normal; text-transform: none; }
 .modal-quests-day .dailies-admin-btn { padding: 7px 16px; border-width: 1px; border-radius: 4px; font: 400 20px var(--font-text); }
 .modal-quests-day .dailies-admin-btn:first-of-type { border-color: transparent; background: transparent; color: #dfc099; }
