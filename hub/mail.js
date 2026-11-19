@@ -2,6 +2,8 @@
 // Не больше 3 писем в день: лишнее складывается в одно. Плохое — никогда не упрёк, только «зов обратно».
 // Старше 30 дней — в архив (не показываются). Хранится в браузере (localStorage), позже — на сервере и в Эхо.
 
+import { koloDate } from "./kolo.js";
+
 const KEY = "gibrid.mail.v1";
 const PER_DAY = 3;
 const KEEP_DAYS = 30;
@@ -154,7 +156,7 @@ export function initMail(box, ctx, icon, dailies) {
   if (!get().letters.length && !get().keys.length) postMail({ key: "welcome", from: "mir", title: T.welcomeTitle, text: T.welcomeText });
   paint();
 
-  button.addEventListener("click", () => ctx.modal.showNode(T.title ?? "", windowNode(), "modal-wide modal-mail"));
+  button.addEventListener("click", () => ctx.modal.showNode(T.title ?? "", windowNode(), "modal-wide modal-mail mail-reader"));
 
   function windowNode() {
     const state = get();
@@ -165,6 +167,11 @@ export function initMail(box, ctx, icon, dailies) {
     let openId = letters.find((l) => !l.read)?.id ?? letters[0]?.id;
     const today = dayNum(todayKey());
     const show = () => {
+      const cur = letters.find((l) => l.id === openId);
+      if (cur && !cur.read) {
+        cur.read = true;
+        save();
+      }
       list.replaceChildren();
       let lastDay = null;
       for (const l of letters) {
@@ -175,33 +182,31 @@ export function initMail(box, ctx, icon, dailies) {
         }
         const row = el("button", `mail-row from-${l.from}${l.id === openId ? " open" : ""}${l.read ? "" : " new"}`);
         row.type = "button";
+        if (l.id === openId) row.setAttribute("aria-current", "true");
         const txt = el("span", "mail-row-text");
         txt.append(el("span", "mail-row-title", l.title), el("span", "mail-row-from", T.from?.[l.from] ?? ""));
         row.append(el("span", `mail-seal from-${l.from}`, SEALS[l.from] ?? "☉"), txt);
         if (!l.read) row.append(el("span", "mail-dot"));
-        row.addEventListener("click", () => {
+        row.addEventListener("click", (event) => {
           openId = l.id;
           show();
+          if (event.detail === 0) list.querySelector(".mail-row.open")?.focus();
         });
         list.append(row);
       }
       if (!letters.length) list.append(el("p", "mail-empty", T.empty));
       list.append(el("p", "mail-note", T.archive));
-      const cur = letters.find((l) => l.id === openId);
       pane.replaceChildren();
       if (cur) {
-        if (!cur.read) {
-          cur.read = true;
-          save();
-        }
         const head = el("div", "mail-pane-head");
         const n = today - dayNum(cur.day);
         const who = el("span", "mail-pane-who");
         who.append(el("b", "", T.from?.[cur.from] ?? ""), el("span", "", n === 0 ? T.today : n === 1 ? T.yesterday : fill(T.daysAgo, { n })));
         head.append(el("span", `mail-seal big from-${cur.from}`, SEALS[cur.from] ?? "☉"), who);
-        pane.append(head, el("h3", "", cur.title), cur.parts?.length ? partsNode(cur.parts, T.ui ?? {}) : el("p", "mail-text", cur.text));
+        pane.append(head, el("h3", "", cur.title), cur.parts?.length ? partsNode(cur.parts, T.ui ?? {}, cur.day) : el("p", "mail-text", cur.text));
       }
       pane.append(el("p", "mail-rule", T.rule));
+      pane.scrollTop = 0;
     };
     show();
     root.append(list, pane);
@@ -221,7 +226,7 @@ function line(label, value, cls = "") {
 }
 
 /** Табличка письма. parts: { t: "day" | "level" | "mera" | "period", ... }. */
-export function partsNode(parts, U) {
+export function partsNode(parts, U, date) {
   const box = el("div", "mail-parts");
   const sorted = [...parts].sort((a, b) => (ORDER[a.t] ?? 3) - (ORDER[b.t] ?? 3));
   const levels = sorted.filter((p) => p.t === "level");
@@ -236,14 +241,86 @@ export function partsNode(parts, U) {
       levelsDone = true;
       box.append(levelsCard(levels, U));
     } else if (p.t === "mera") box.append(meraCard(p, U));
-    else if (p.t === "schedule") {
-      const schedule = el("div", "mail-card mail-mera-card");
-      schedule.append(el("p", "mail-mera-text", p.note));
-      for (const [label, value] of p.rows) schedule.append(line(label, value));
-      box.append(schedule);
-    }
+    else if (p.t === "schedule") box.append(scheduleCard(p, U, date));
   }
-  return box;
+  const day = sorted.find((p) => p.t === "day");
+  const exp = sorted.find((p) => p.t === "exp");
+  return day && exp ? daySummary(box, day, exp, U) : box;
+}
+
+function daySummary(parts, day, exp, U) {
+  const root = el("div", "mail-summary");
+  const metrics = el("div", "mail-metrics");
+  const metric = (label, amount, unit, cls) => {
+    const cell = el("div", `mail-metric ${cls}`);
+    const value = el("b", "", String(amount));
+    if (unit) value.append(el("small", "", ` ${unit}`));
+    cell.append(el("span", "", label), value);
+    return cell;
+  };
+  // У писем прежней версии сохранён общий баланс, а сумма зачисления неизвестна.
+  const credited = Number.isFinite(exp.credited);
+  const will = metric(U.willTitle, sign(day.total), "", "will");
+  const willTrack = parts.querySelector(".mail-bar .mail-bar-track");
+  if (willTrack) will.append(willTrack);
+  metrics.append(metric(credited ? U.expCredited : U.expHand, credited ? exp.credited : exp.hand, U.expUnit, "hand"), will);
+
+  root.append(el("span", `mail-summary-grade g-${day.grade}`, `✓ ${day.gradeName}`), metrics);
+  const growth = parts.querySelector(".mail-growth-card");
+  if (growth) root.append(growth);
+
+  const actions = el("div", "mail-summary-actions");
+  const wallet = parts.querySelector(".mail-exp-go");
+  wallet.textContent = U.expOpen;
+  const details = el("details");
+  details.append(el("summary", "", U.dayDetails), parts);
+  actions.append(wallet, details);
+  root.append(actions);
+  return root;
+}
+
+function scheduleCard(part, U, date) {
+  const schedule = el("div", "mail-schedule");
+  const [training, rest, holidays] = part.rows ?? [];
+  if (!training || !rest || !holidays) {
+    schedule.append(el("span", "mail-schedule-note", part.note));
+    for (const [label, value] of part.rows ?? []) schedule.append(line(label, value));
+    return schedule;
+  }
+  const numbers = ([, days]) => days.split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  const trainingDays = new Set(numbers(training));
+  const days = [...new Set([...trainingDays, ...numbers(rest)])].sort((a, b) => a - b);
+  const current = koloDate();
+  const [year, month, day] = String(date ?? "").split("-").map(Number);
+  const dateWeek = koloDate(new Date(year, month - 1, day));
+  const today = current.year === dateWeek.year && current.month === dateWeek.month && current.week === dateWeek.week ? current.wday : 0;
+  const icon = (isTraining) => {
+    const image = el("img");
+    image.src = `/assets/hub/icons/${isTraining ? "chart" : "leaf"}.svg`;
+    image.alt = "";
+    return image;
+  };
+  const week = el("ol", "mail-schedule-week");
+  week.setAttribute("aria-label", U.scheduleDays);
+  for (const n of days) {
+    const isTraining = trainingDays.has(n);
+    const tile = el("li", `mail-schedule-day ${isTraining ? "training" : "rest"}`);
+    if (n === today) tile.setAttribute("aria-current", "date");
+    tile.setAttribute("aria-label", fill(U.scheduleDay, { n, kind: isTraining ? U.training : U.rest }));
+    tile.append(icon(isTraining), el("span", "", String(n)));
+    week.append(tile);
+  }
+  const legend = el("div", "mail-schedule-legend");
+  const trainingKey = el("span", "training", U.training);
+  const restKey = el("span", "rest", U.rest);
+  trainingKey.prepend(icon(true));
+  restKey.prepend(icon(false));
+  legend.append(trainingKey, restKey);
+  if (today) legend.append(el("span", "today-key", U.today));
+  const holidaysRow = el("div", "mail-schedule-holidays");
+  holidaysRow.append(el("span", "", holidays[0]), el("span", "", holidays[1]));
+  schedule.append(el("span", "mail-schedule-note", part.note), week, legend, holidaysRow);
+  return schedule;
 }
 
 // Воля за день: цвет дня — полоска и плашка; Воля — синим; бонус — цветом дня, которого ещё нет — пунктиром

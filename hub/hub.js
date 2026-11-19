@@ -1482,7 +1482,9 @@ function createDailies(box, ctx) {
   submit.addEventListener("click", () => {
     if (state.closed) return;
     state.closed = true;
+    const balanceBefore = state.wallet;
     settleDayWallet(state, state, true);
+    const credited = Math.max(0, state.wallet - balanceBefore);
     window.clearTimeout(toastTimer);
     toastNode.classList.remove("on");
     toastNode.textContent = "";
@@ -1501,7 +1503,7 @@ function createDailies(box, ctx) {
       // письма за сданный день (почта, 27.10): Мир — итог дня; Хранитель меры — если одна сила отстаёт
       const M = ctx.texts.mail ?? {};
       const D = M.day?.[grade] ?? {};
-      postMail({ key: `day-${state.day}`, from: "mir", group: "day", groupTitle: M.dayTitle, title: D.title, text: fillMail(D.text, { will: dayWill - balanceBonus, half: W.day?.yellow ?? 0, full: W.day?.green ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0) }) + (balanceBonus ? fillMail(M.balanceBonus, { n: balanceBonus }) : ""), parts: [{ t: "day", grade, gradeName: D.title, base: W.day?.[grade] ?? 0, half: W.day?.yellow ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0), balance: balanceBonus, total: dayWill, note: D.note, bar: willBar(dayWill) }, growthPart(), expPart()].filter(Boolean) });
+      postMail({ key: `day-${state.day}`, from: "mir", group: "day", groupTitle: M.dayTitle, title: D.title, text: fillMail(D.text, { will: dayWill - balanceBonus, half: W.day?.yellow ?? 0, full: W.day?.green ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0) }) + (balanceBonus ? fillMail(M.balanceBonus, { n: balanceBonus }) : ""), parts: [{ t: "day", grade, gradeName: D.title, base: W.day?.[grade] ?? 0, half: W.day?.yellow ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0), balance: balanceBonus, total: dayWill, note: D.note, bar: willBar(dayWill) }, growthPart(), expPart(credited)].filter(Boolean) });
       if (ctx.stats?.balance) {
         const bal = powersBalance(ctx.stats, state.flasks, curve);
         if (!bal.balanced && !bal.newcomer && bal.lead?.pair) {
@@ -1596,11 +1598,11 @@ function createDailies(box, ctx) {
     return { t: "growth", compact: true, rows, intel: { from: intelFrom, to: intelTo, near } }; // сводка дня — тонко (автор, 27.10); полная — в карточке персонажа
   }
 
-  // строка опыта для письма (27.10): сколько заработал, сколько ушло на слабости, сколько в руке
-  function expPart() {
+  // В письмо попадает изменение кошелька именно при сдаче дня.
+  function expPart(credited) {
     const earned = Object.values(state.dayGains ?? {}).reduce((a, b) => a + b, 0);
     const spent = (state.bought ?? []).reduce((a, b) => a + b.price, 0);
-    return { t: "exp", earned, spent, hand: state.wallet };
+    return { t: "exp", earned, spent, hand: state.wallet, credited };
   }
 
   // полоска Воли для письма (27.10): где была до сданного дня и куда доползла
