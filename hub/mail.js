@@ -270,7 +270,7 @@ function daySummary(parts, day, exp, U) {
   if (growth) root.append(growth);
 
   const actions = el("div", "mail-summary-actions");
-  const wallet = parts.querySelector(".mail-exp-go");
+  const wallet = parts.querySelector(".mail-wallet-go");
   wallet.textContent = U.expOpen;
   const details = el("details");
   details.append(el("summary", "", U.dayDetails), parts);
@@ -503,7 +503,7 @@ function expLine(p, U) {
   row.append(el("span", "mail-exp-ic", "◈"), part(U.expEarned, sign(p.earned), "up"));
   if (p.spent) row.append(part(U.expSpent, `−${p.spent}`, "down"));
   row.append(part(U.expHand, String(p.hand), "hand"));
-  const go = el("button", "mail-exp-go", U.expGo ?? "");
+  const go = el("button", "mail-exp-go mail-wallet-go", U.expGo ?? "");
   go.type = "button";
   go.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:open-wallet")));
   row.append(go);
