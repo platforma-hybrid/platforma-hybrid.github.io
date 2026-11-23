@@ -1,6 +1,6 @@
 // Кошелёк (автор, 26–27.10; claude/SPEC_WALLET.md): в углу хаба — «◈ В руке · ⧗ В закромах», нажатие → окно «Кошелёк».
 // Первая версия: Казна целиком (история по дням, сводка недели, «Ты внёс в Фонд», на что тратить);
-// Закрома, Открытая цель, Обмен, Знаки, Мир сегодня — вкладки «скоро» (нужны сервер и люди).
+// Закрома, Открытая цель, Обмен и Знаки ждут сервера. Опыт мира пока показывает выбор периода.
 // Данные — из ежедневных заданий (событие hub:dailies); «Путь» живёт в карточке персонажа.
 
 const el = (tag, className, text) => {
@@ -116,7 +116,9 @@ export function initWallet(box, ctx, getDailies) {
         b.classList.toggle("on", on);
         b.setAttribute("aria-selected", on ? "true" : "false");
       }
-      pane.replaceChildren(id === "kazna" ? kazna(d) : soon(id));
+      if (id === "kazna") pane.replaceChildren(kazna(d));
+      else if (id === "mir" && T.worldExperience) pane.replaceChildren(worldExperience());
+      else pane.replaceChildren(soon(id));
     };
     for (const [id, label] of list) {
       const b = el("button", "wallet-tab", label ?? id);
@@ -130,6 +132,36 @@ export function initWallet(box, ctx, getDailies) {
     root.append(nums, tabs, pane);
     open("kazna");
     return root;
+  }
+
+  function worldExperience() {
+    const text = T.worldExperience;
+    const box = el("section", "wallet-soon wallet-side");
+    const periods = el("div", "wallet-tabs");
+    periods.setAttribute("role", "group");
+    periods.setAttribute("aria-label", text.periodLabel);
+    const total = el("div", "wallet-big hand");
+    total.setAttribute("aria-live", "polite");
+    const label = el("span", "wallet-big-label");
+    total.append(label, el("b", "", "—"), el("span", "wallet-big-hint", text.pending));
+    const buttons = Object.entries(text.periods).map(([id, period]) => {
+      const button = el("button", "wallet-tab", period.label);
+      button.type = "button";
+      button.addEventListener("click", () => select(id));
+      periods.append(button);
+      return { id, button };
+    });
+    function select(id) {
+      for (const item of buttons) {
+        const active = item.id === id;
+        item.button.classList.toggle("on", active);
+        item.button.setAttribute("aria-pressed", String(active));
+      }
+      label.textContent = text.periods[id].total;
+    }
+    select("day");
+    box.append(periods, total);
+    return box;
   }
 
   function kazna(d) {

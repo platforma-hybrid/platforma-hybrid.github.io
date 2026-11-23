@@ -6,10 +6,12 @@ const DONE_KEY = "hub.tour.v1";
 // Где подсвечивать: селектор (или несколько — берётся общая рамка). Пусто — подсказка по центру, без подсветки.
 const TARGETS = {
   welcome: [],
-  kolo: [".kolo-rim"],
+  kolo: [".kolo-rim", ".ph-kolo-svg"],
   // .ph-* — панель телефона (phone.js): на телефоне доски сцены скрыты, подсвечиваем её кнопки
   dailies: ['[data-id="dailies"]', ".ph-dailies"],
   today: [".kolo-today", ".ph-today"],
+  wallet: [".wallet-plank"],
+  mail: [".mail-button", ".ph-right .ph-icon"],
   menu: [".kolo-menu-item", ".ph-menu-item"],
   book: ['[data-id="book"]', '[data-id="figure"]'],
   planet: ['[data-id="planet"]'],

@@ -11,7 +11,8 @@ const REAL = "gibrid.admin.real";
 const UNDO = "gibrid.admin.undo";
 const FOLD = "gibrid.admin.fold";
 const UNDO_MAX = 40;
-const KEEP_ON_RESET = new Set(["gibrid.admin.on", FOLD, "gibrid.dataEpoch"]);
+export const PROGRESS_RESET_KEY = "gibrid.progressReset";
+const KEEP_ON_RESET = new Set(["gibrid.admin.on", FOLD, "gibrid.dataEpoch", PROGRESS_RESET_KEY]);
 
 export function resetAllProgress(storage = window.localStorage) {
   const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
@@ -20,6 +21,8 @@ export function resetAllProgress(storage = window.localStorage) {
       storage.removeItem(key);
     }
   }
+  // Другие вкладки перечитывают прогресс после завершения очистки.
+  storage.setItem(PROGRESS_RESET_KEY, `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 }
 
 function el(tag, className, text) {

@@ -15,6 +15,7 @@ import { initCard } from "./card.js";
 import { needAnketa, openAnketa, openHealth, startSteps } from "./anketa.js";
 import { fill as fillMail, initMail, periodSummaries, postMail } from "./mail.js";
 import { createDailyCards } from "./daily-cards.js";
+import { PROGRESS_RESET_KEY } from "./admin.js";
 
 const params = new URLSearchParams(window.location.search);
 // Админ-режим (автор, 27.10): на компьютере автора (localhost) включён всегда; на сайте — один раз открыть с ?admin=1,
@@ -445,6 +446,12 @@ const components = {
 // ---------- ежедневные задания (v0.1, прогресс — в браузере) ----------
 
 const DAILIES_KEY = "gibrid.dailies.v1";
+const progressResetAtStart = (() => {
+  try { return window.localStorage.getItem(PROGRESS_RESET_KEY); } catch { return null; }
+})();
+window.addEventListener("storage", (event) => {
+  if (event.key === PROGRESS_RESET_KEY && event.newValue !== progressResetAtStart) window.location.reload();
+});
 // последнее состояние дейликов — для меню (кольцо Воли, счётчик «Задания»)
 let lastDailies = null;
 
@@ -611,6 +618,8 @@ function defaultPicks(data, done) {
 
 function saveDailiesState(state) {
   try {
+    // Вкладка со старым состоянием не записывает его после полного сброса.
+    if (window.localStorage.getItem(PROGRESS_RESET_KEY) !== progressResetAtStart) return;
     window.localStorage.setItem(DAILIES_KEY, JSON.stringify(state));
   } catch {
     // хранилище недоступно — прогресс живёт до перезагрузки страницы
@@ -852,15 +861,17 @@ function createDailies(box, ctx) {
   state.steps ??= {};
   state.setGains ??= {};
   const stepEntry = (task) => (state.steps[task.id] ??= { step: task.step ?? 0, since: state.day });
+  const useStandardReps = (task) => task.fixedStandardReps && !careful();
   const stepInfo = (task) => {
     const entry = stepEntry(task);
     const ladder = task.steps ?? [];
     const gentleStep = gentleToday() ? state.gentleSteps?.[task.id] : undefined;
-    const cur = ladder[gentleStep ?? entry.step] ?? { name: task.name, n: task.n };
+    const standardReps = useStandardReps(task);
+    const cur = standardReps ? task : (ladder[gentleStep ?? entry.step] ?? task);
     const status = ladder.length
       ? stepStatus(data.stepRule, task.id, entry, state.history, state.day, { setsMax, last: ladder.length - 1, restricted: data.stepRule?.restricted || careful() })
       : { offer: false, auto: false, mult: 1, canReturn: false };
-    if (gentleToday()) {
+    if (standardReps || gentleToday()) {
       status.offer = false;
       status.canReturn = false;
     }
@@ -874,6 +885,7 @@ function createDailies(box, ctx) {
     const M = ctx.texts.mail ?? {};
     if (status.auto && !(state.sets?.[task.id] > 0)) {
       state.steps[task.id] = stepUp(entry, state.day);
+      if (useStandardReps(task)) continue;
       const name = task.steps[state.steps[task.id].step]?.name ?? task.name;
       raisedNow.push(name);
       postMail({ key: `step-${task.id}-${state.steps[task.id].step}-raised`, from: "mera", title: M.raisedTitle, text: fillMail(M.raisedText, { name }), parts: [{ t: "mera", kind: "raised", text: fillMail(M.raisedText, { name }) }] });
@@ -1752,7 +1764,7 @@ function createDailies(box, ctx) {
   document.addEventListener("hub:step-take", (event) => {
     const { task: id, step } = event.detail ?? {};
     const task = allTasks.find((x) => x.id === id);
-    if (!task?.steps?.length || (state.steps?.[id]?.step ?? task.step ?? 0) !== step) return;
+    if (!task?.steps?.length || useStandardReps(task) || (state.steps?.[id]?.step ?? task.step ?? 0) !== step) return;
     state.steps[id] = stepUp(stepEntry(task), state.day);
     toast(fill(t.sets?.raised, { name: stepInfo(task).cur.name }));
     commit();

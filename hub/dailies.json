@@ -55,7 +55,8 @@
           "attr": "strength",
           "kind": "rep",
           "check": "счётчик",
-          "n": 15,
+          "n": 20,
+          "fixedStandardReps": true,
           "unit": "раз",
           "steps": [
             {

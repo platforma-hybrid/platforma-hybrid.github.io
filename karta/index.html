@@ -27,10 +27,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); font
 .wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
 
 .hero { position: relative; margin-inline: -20px; padding: 0 20px 36px; text-align: center; }
-/* Постер «Тропа мира · Восемь камней пути» (автор, 21.10) — главный, сверху; по краям тот же постер, размытый */
+/* Постер «Тропа мира · Восемь камней пути» на фоне страницы. */
 .poster { position: relative; margin-inline: -20px; overflow: hidden; }
-.poster::before { content: ""; position: absolute; inset: -30px; background: url(img/poster.jpg) center / cover no-repeat; filter: blur(22px) brightness(.45); }
-.poster::after { content: ""; position: absolute; inset: auto 0 0; height: 40px; background: linear-gradient(transparent, var(--bg)); }
 .poster img { position: relative; display: block; width: 100%; height: auto; max-width: 760px; aspect-ratio: 16 / 9; margin: 0 auto; object-fit: cover; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .kicker { font-family: var(--display); letter-spacing: .3em; color: var(--gold); font-size: 15px; }
