@@ -48,7 +48,7 @@ export function startSteps(p) {
   return out;
 }
 
-export function openAnketa(ctx, { again = false } = {}) {
+export function openAnketa(ctx, { again = false, onComplete } = {}) {
   const T = ctx.texts.anketa ?? ctx.texts.dailies?.anketa ?? {};
   const p = again ? { ...(loadHealth() ?? {}) } : {};
   p.parq ??= Array(7).fill(false);
@@ -113,6 +113,7 @@ export function openAnketa(ctx, { again = false } = {}) {
     saveHealth(p);
     document.dispatchEvent(new CustomEvent("hub:anketa-done", { detail: { profile: p, again } }));
     document.querySelector(".modal-close")?.click();
+    onComplete?.();
   }
 
   function draw() {

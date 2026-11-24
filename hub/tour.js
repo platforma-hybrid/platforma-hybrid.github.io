@@ -10,7 +10,7 @@ const TARGETS = {
   // .ph-* — панель телефона (phone.js): на телефоне доски сцены скрыты, подсвечиваем её кнопки
   dailies: ['[data-id="dailies"]', ".ph-dailies"],
   today: [".kolo-today", ".ph-today"],
-  wallet: [".wallet-plank"],
+  wallet: [".wallet-plank", ".ph-wallet"],
   mail: [".mail-button", ".ph-right .ph-icon"],
   menu: [".kolo-menu-item", ".ph-menu-item"],
   book: ['[data-id="book"]', '[data-id="figure"]'],

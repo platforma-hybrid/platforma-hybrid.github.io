@@ -224,7 +224,7 @@ export function showSandboxBanner(texts) {
 
 // ---------- панель ----------
 
-export function startAdmin(ctx) {
+export function startAdmin(ctx, { endSession } = {}) {
   const t = ctx.texts.admin;
   const data = ctx.dailies;
   const lib = ctx.skills;
@@ -246,6 +246,15 @@ export function startAdmin(ctx) {
   };
   fold.addEventListener("click", () => setFold(!panel.classList.contains("collapsed")));
   head.append(fold);
+  if (endSession) {
+    const exit = el("button", "adm-fold", ctx.texts.adminLogin.exit);
+    exit.type = "button";
+    exit.addEventListener("click", async () => {
+      exit.disabled = true;
+      await endSession();
+    });
+    head.append(exit);
+  }
   panel.append(head);
 
   const btn = (text, onClick, cls = "") => {

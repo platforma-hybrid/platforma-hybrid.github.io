@@ -4,6 +4,7 @@
 // Награда — только если закрыты ВСЕ задания срока. auto-задания считаются из ежедневных (событие hub:dailies).
 
 import { koloDate, MONTH_DAYS, WEEK_DAYS } from "./kolo.js";
+import { needAnketa, openAnketa } from "./anketa.js";
 
 const KEY = "gibrid.quests.v1";
 const DAY_MS = 86_400_000;
@@ -273,9 +274,8 @@ export function initQuests(ctx, getDailies) {
   refresh();
 
   document.addEventListener("hub:modal-closed", returnBoard);
-  document.addEventListener("hub:quests-open", (event) => open(event.detail?.tab));
 
-  function open(which) {
+  function show(which) {
     if (which === "day" || which === "week" || which === "month") tab = which;
     openNode = el("div", "quests-board");
     render(openNode);
@@ -284,6 +284,9 @@ export function initQuests(ctx, getDailies) {
   }
 
   return {
-    open,
+    open(which) {
+      if (needAnketa()) return openAnketa(ctx, { onComplete: () => show("day") });
+      show(which);
+    },
   };
 }

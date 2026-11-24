@@ -2,6 +2,8 @@
 // Большая картина хаба на телефоне ужимается в треть — текст 5–6 px. Поэтому на телефоне:
 // картина заполняет экран целиком (без полей), а живое — панель поверх неё настоящими пикселями.
 // Панель не хранит своих данных: зеркалит кнопки и надписи хаба и нажимает их же — логика одна.
+import { koloDate } from "./kolo.js";
+
 const PHONE_MQ = "(orientation: landscape) and (max-height: 540px)";
 
 function el(tag, className, text) {
@@ -27,8 +29,14 @@ export function initPhone(ctx, { refit }) {
   const right = el("div", "ph-right");
   const status = el("button", "ph-chip ph-status");
   const mail = el("button", "ph-chip ph-icon", "✉");
-  mail.setAttribute("aria-label", "Почта");
-  right.append(status, mail);
+  const character = el("button", "ph-chip ph-character");
+  const avatar = el("img");
+  avatar.src = ctx.character.portrait;
+  avatar.alt = "";
+  character.setAttribute("aria-label", ctx.texts.modals.character.title);
+  character.append(avatar);
+  mail.setAttribute("aria-label", ctx.texts.mail.title);
+  right.append(character, status, mail);
   top.append(date, dailies, right);
   // слева — коло (копия колеса хаба: месяцы нажимаются так же) и «Сегодня»; справа — меню
   const kolo = el("div", "ph-kolo");
@@ -37,8 +45,13 @@ export function initPhone(ctx, { refit }) {
   left.append(kolo, today);
   const menu = el("nav", "ph-menu");
   const loc = el("button", "ph-chip ph-loc");
-  hud.append(top, left, menu, loc);
-  for (const b of [date, dailies, status, mail, loc]) b.type = "button";
+  const wallet = el("button", "ph-chip ph-wallet");
+  const walletSign = el("span", "", "◈");
+  walletSign.setAttribute("aria-hidden", "true");
+  const balance = el("b");
+  wallet.append(walletSign, el("span", "", ctx.texts.wallet.title), balance);
+  hud.append(top, left, menu, loc, wallet);
+  for (const b of [date, dailies, status, mail, loc, character, wallet]) b.type = "button";
 
   // нажать ту же кнопку хаба — сработает её обычное действие
   // (у SVG-секторов коло нет .click(), поэтому — настоящее событие нажатия, всплывающее до сцены)
@@ -46,6 +59,15 @@ export function initPhone(ctx, { refit }) {
   date.addEventListener("click", () => press(date.dataset.action ?? ""));
   dailies.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:dailies-toggle")));
   status.addEventListener("click", () => press("modal:status"));
+  let returnFocus = null;
+  character.addEventListener("click", () => {
+    returnFocus = character;
+    press("modal:character");
+  });
+  wallet.addEventListener("click", () => {
+    returnFocus = wallet;
+    document.dispatchEvent(new CustomEvent("hub:open-wallet"));
+  });
   // почта (28.10): открывает настоящее окно почты; число новых — как на кнопке хаба
   mail.addEventListener("click", () => ctx.stage.querySelector(".mail-button")?.click());
   const mailBadge = el("span", "ph-mail-badge");
@@ -110,11 +132,16 @@ export function initPhone(ctx, { refit }) {
     syncSheet(!hud.hidden);
     if (hud.hidden) return;
     const caption = ctx.stage.querySelector(".kolo-caption");
-    date.textContent = caption?.textContent.trim() ?? "";
+    const { month, week, wday, short } = koloDate();
+    const { monthLabel, weekDay, shortDay, tasks } = ctx.texts.phone;
+    const dayLabel = (short ? shortDay : weekDay).replace("{w}", week).replace("{d}", wday);
+    date.replaceChildren(el("span", "", monthLabel.replace("{m}", month)), el("small", "", dayLabel));
+    date.setAttribute("aria-label", caption?.textContent.trim() ?? "");
     if (caption?.dataset.action) date.dataset.action = caption.dataset.action;
-    dailies.replaceChildren(el("b", "", text(".dailies-strip .gold-text")), el("span", "", text(".dailies-meta")));
+    dailies.replaceChildren(el("b", "", tasks), el("span", "", text(".dailies-meta")));
     status.textContent = text('[data-action="modal:status"]').replace(/^Статус:\s*/, "");
     loc.textContent = text('[data-action="modal:location"]');
+    balance.textContent = text(".wallet-num:not(.store)");
 
     const origs = [...ctx.stage.querySelectorAll(".kolo-menu-item")];
     const menuKey = origs.map((o) => o.textContent).join("|");
@@ -139,6 +166,10 @@ export function initPhone(ctx, { refit }) {
     // открыто окно или подсказка — панель прячется, чтобы не лежать поверх
     const busy = document.querySelector(".modal-backdrop:not([hidden]), .st-backdrop:not([hidden]), .sk-backdrop:not([hidden]), .dailies-item.is-open");
     hud.classList.toggle("ph-busy", Boolean(busy));
+    if (!busy && returnFocus) {
+      returnFocus.focus();
+      returnFocus = null;
+    }
   }
 
   let queued = false;

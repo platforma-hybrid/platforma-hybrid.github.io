@@ -2024,6 +2024,51 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .adm-pair .adm-name { color: #ffd27a; }
 .adm-sub { margin: 6px 0 2px; color: #ffd27a; }
 .adm-help { margin: 6px 0 0; color: #a9bcc8; font-size: 12px; }
+
+.hub-admin-entry {
+  position: fixed; inset: 0; margin: auto; isolation: isolate;
+  width: min(500px, calc(100vw - 28px)); height: fit-content; max-height: calc(100dvh - 16px);
+  padding: 42px 42px 38px; color: #eddbb5; text-align: center;
+  background: none; border: 0; box-shadow: none; box-sizing: border-box;
+}
+.hub-admin-entry::backdrop { background: #0907059e; }
+.hub-admin-entry::before, .hub-admin-entry::after {
+  content: ""; position: absolute; pointer-events: none; z-index: -1;
+}
+.hub-admin-entry::before {
+  inset: 9px; background: radial-gradient(ellipse at center top, #332719, #130f0a 74%);
+  clip-path: polygon(3% 0, 97% 0, 100% 7%, 100% 93%, 97% 100%, 3% 100%, 0 93%, 0 7%);
+}
+.hub-admin-entry::after {
+  inset: 0; background: url('/assets/hub/ui/frame/frame_window.png') center / 100% 100% no-repeat;
+}
+.hub-admin-entry > h2 {
+  margin: 0 18px 10px; font: 700 32px/1.16 var(--font-title); color: #f5d386;
+}
+.hub-admin-entry > h2:focus { outline: none; }
+.hub-admin-close {
+  position: absolute; cursor: pointer;
+  top: 17px; right: 18px; width: 35px; height: 35px; border: 1px solid #866742;
+  border-radius: 50%; background: #18120c; color: #f2d399; font: 26px/1 var(--font-text);
+}
+.hub-admin-login { font: 18px/1.4 var(--font-text); }
+.hub-admin-login p { margin: 0 0 16px; }
+.hub-admin-login small { display: block; margin-top: 12px; color: #cbb78c; font-size: 15px; }
+.hub-admin-confirm {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+  box-sizing: border-box; padding: 8px 20px; border: 1px solid #ba9660; border-radius: 5px;
+  background: linear-gradient(#41301c, #20170f); color: #f3d394;
+  font: 700 19px var(--font-title); text-decoration: none; cursor: pointer;
+}
+.hub-admin-confirm:not([href]):is(a) { opacity: .65; cursor: default; }
+.hub-admin-code { display: block; margin-top: 12px; color: #f3d394; }
+.hub-admin-login .hub-admin-status { color: #cbb78c; margin: 8px 0 0; font-size: 15px; }
+.hub-admin-status:empty, .hub-admin-login [hidden] { display: none; }
+.hub-admin-login button.hub-admin-confirm { margin-top: 10px; }
+@media (max-height: 470px) {
+  .hub-admin-entry { padding: 30px 38px 28px; }
+  .hub-admin-entry > h2 { font-size: 28px; }
+}
 .adm-banner { position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 3001; display: flex; align-items: center; gap: 12px; padding: 6px 14px;
   background: #b5341f; color: #fff; border-radius: 0 0 8px 8px; font: 14px system-ui, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
 .adm-banner b { letter-spacing: 0.1em; }

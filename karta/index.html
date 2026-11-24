@@ -59,6 +59,7 @@ h1 { font-family: var(--display); font-weight: 700; color: var(--gold); font-siz
 .stone { display: grid; grid-template-columns: 1fr; gap: 18px; padding: 34px 0; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
 .cover { position: relative; margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
 .cover img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+#hub .cover img { height: auto; aspect-ratio: 8 / 5; object-fit: contain; }
 .cover .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgb(0 0 0 / .55); }
 .cover .prog i { display: block; height: 100%; }
 .medal { position: relative; width: 150px; height: 150px; }
@@ -150,6 +151,7 @@ if (tg && tg.initData) {
 // d — сделано, p — частично, t — ещё нет
 const STONES = [
   { n: "I", id: "hub", title: "Главный экран", img: "c1", state: "now",
+    alt: "Главный экран игры с Коло, заданиями, карточкой персонажа, Почтой, инвентарём и кошельком",
     lead: "Здесь уже можно брать карты испытаний, закрывать день, следить за ростом сил и копить опыт. Прогресс сохраняется в браузере.",
     groups: [
       { name: "Сцена", items: [
@@ -483,7 +485,7 @@ document.getElementById("stones").innerHTML = STONES.map((stone) => {
   }).join("");
   return `<article class="stone" id="${stone.id}">
     <figure class="cover">
-      <img src="img/${stone.img}.jpg" alt="" loading="lazy">
+      <img src="img/${stone.img}.jpg" alt="${esc(stone.alt ?? "")}" loading="lazy">
       <div class="prog" aria-hidden="true"><i style="width:${s.pct}%;background:${color}"></i></div>
     </figure>
     <div>

@@ -16,12 +16,14 @@ import { needAnketa, openAnketa, openHealth, startSteps } from "./anketa.js";
 import { fill as fillMail, initMail, periodSummaries, postMail } from "./mail.js";
 import { createDailyCards } from "./daily-cards.js";
 import { PROGRESS_RESET_KEY } from "./admin.js";
+import { ADMIN_LOGIN_PARAM, openAdminLogin, readAdminAccess, watchAdminSession } from "./admin-login.js";
 
 const params = new URLSearchParams(window.location.search);
-// Админ-режим (автор, 27.10): на компьютере автора (localhost) включён всегда; на сайте — один раз открыть с ?admin=1,
-// дальше браузер помнит. ?admin=0 — выключить (запоминается так же).
 const LOCAL = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const ADMIN = (() => {
+const ADMIN_ENTRY = params.get(ADMIN_LOGIN_PARAM) === "1";
+// На локальной машине сохраняем старый режим проверки. Публичный Hub проверяет сеанс у сервера.
+let ADMIN = (() => {
+  if (!LOCAL || ADMIN_ENTRY) return false;
   const q = params.get("admin");
   try {
     if (q === "1" || q === "0") window.localStorage.setItem("gibrid.admin.on", q);
@@ -2062,7 +2064,7 @@ function resetProgressOnce() {
 
 async function main() {
   resetProgressOnce();
-  const [layout, texts, character, dailies, quests, achievements, stats, skills] = await Promise.all([
+  const [layout, texts, character, dailies, quests, achievements, stats, skills, adminAccess] = await Promise.all([
     loadJson(`/hub/hub.layout${/^[a-z0-9-]+$/.test(params.get("layout") ?? "") ? "." + params.get("layout") : ""}.json`),
     loadJson("/hub/hub.texts.json"),
     loadJson("/hub/mock.character.json"),
@@ -2071,14 +2073,16 @@ async function main() {
     loadJson("/hub/achievements.json"),
     loadJson("/hub/stats.json"),
     loadJson("/hub/skills.json"),
+    readAdminAccess(LOCAL, ADMIN_ENTRY),
   ]);
+  ADMIN ||= adminAccess.authenticated;
   document.title = texts.pageTitle;
 
   const stage = document.getElementById("stage");
   const animationsOn = layout.animations !== false && params.get("anim") !== "0";
   document.body.classList.toggle("no-anim", !animationsOn);
 
-  const ctx = { layout, texts, character, dailies, quests, achievements, stats, skills, stage, editMode: params.get("edit") === "1" };
+  const ctx = { layout, texts, character, dailies, quests, achievements, stats, skills, stage, editMode: ADMIN && params.get("edit") === "1" };
   buildStage(stage, ctx);
   ctx.modal = createModal(stage, texts);
   ctx.questsUi = initQuests(ctx, () => lastDailies);
@@ -2101,7 +2105,8 @@ async function main() {
     const { startEditMode } = await import("./hub.edit.js");
     startEditMode(ctx, { placeItem, fitStage });
   }
-  // Режим «Числа» (?admin=1): проверочные числа поверх настоящего прогресса; пока проверка идёт — полоса «ПРОВЕРКА»
+  const endAdminSession = adminAccess.authenticated ? watchAdminSession(adminAccess) : undefined;
+  // Режим «Числа»: проверочные числа поверх настоящего прогресса; пока проверка идёт — полоса «ПРОВЕРКА»
   // хранилище браузера бывает закрыто (приватный режим, встроенные браузеры) — тогда обращение бросает ошибку (ревизия 24.10, п. 3.1)
   let sandboxSaved = false;
   try {
@@ -2111,18 +2116,19 @@ async function main() {
   }
   if (!ctx.editMode && (ADMIN || sandboxSaved)) {
     const { startAdmin, showSandboxBanner, sandboxOn } = await import("./admin.js");
-    if (ADMIN) startAdmin(ctx);
+    if (ADMIN) startAdmin(ctx, { endSession: endAdminSession });
     if (sandboxOn()) showSandboxBanner(texts);
   }
   // Мини-обучение при первом входе (в режиме правки не мешает).
-  if (!ctx.editMode) {
+  if (!ctx.editMode && !ADMIN_ENTRY && !adminAccess.authenticated) {
     const { initTour } = await import("./tour.js");
     initTour(ctx);
   }
   // ?open=stats — сразу открыть окно (для скриншотов и проверки)
-  if (params.get("open") === "stats") ctx.statsUi.open();
-  if (params.get("open") === "skills") ctx.skillsUi.open();
-  if (params.get("open") === "quests") ctx.questsUi.open("day");
+  if (ADMIN_ENTRY && !ADMIN) openAdminLogin(ctx, adminAccess.origin);
+  else if (params.get("open") === "stats") ctx.statsUi.open();
+  else if (params.get("open") === "skills") ctx.skillsUi.open();
+  else if (params.get("open") === "quests") ctx.questsUi.open("day");
   document.body.dataset.ready = "1";
 }
 

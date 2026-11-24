@@ -7,6 +7,7 @@ import { koloDate } from "./kolo.js";
 const KEY = "gibrid.mail.v1";
 const PER_DAY = 3;
 const KEEP_DAYS = 30;
+const SEALS = { mir: "☉", mera: "Т", gardener: "❧", kazna: "К" };
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -45,7 +46,7 @@ function save() {
 }
 
 /**
- * Положить письмо в почту. letter = { key, from: "mir" | "mera" | "kazna", title, text, parts? }.
+ * Положить письмо в почту. letter = { key, from: "mir" | "mera" | "gardener" | "kazna", title, text, parts? }.
  * parts — табличка письма (день, уровни, Хранитель меры, неделя); text — то же простыми словами (запасной вид, позже — Эхо).
  * key — чтобы одно и то же событие не пришло дважды. Четвёртое и дальше письмо дня складывается в третье.
  */
@@ -60,10 +61,16 @@ export function addLetter(state, letter, day = todayKey()) {
   const into = same || (todays.length >= PER_DAY ? [...todays].reverse().find((l) => l.from === letter.from) ?? todays[todays.length - 1] : null);
   if (into) {
     if (same && letter.groupTitle) into.title = letter.groupTitle;
+    const sender = letter.from ?? "mir";
+    if (into.from !== sender) into.senders = [...new Set([...(into.senders ?? []), sender])];
     // чужое письмо внутри — с заголовком, если текст его ещё не повторяет
-    const head = same || into.from === (letter.from ?? "mir") || String(letter.text).startsWith(letter.title) ? "" : `${letter.title}. `;
+    const head = same || into.from === sender || String(letter.text).startsWith(letter.title) ? "" : `${letter.title}. `;
+    if (into.parts?.length || letter.parts?.length) {
+      const earlier = into.parts?.length ? into.parts : [{ t: "text", text: into.text }];
+      const later = letter.parts?.length ? letter.parts : [{ t: "text", text: head + letter.text }];
+      into.parts = [...earlier, ...later];
+    }
     into.text = `${into.text}${same ? "\n" : "\n\n"}${head}${letter.text}`;
-    if (letter.parts?.length) into.parts = [...(into.parts ?? []), ...letter.parts];
     into.read = false;
     return true;
   }
@@ -127,7 +134,13 @@ export function postMail(letter) {
 
 export const unreadCount = (state = get()) => state.letters.filter((l) => !l.read).length;
 
-const SEALS = { mir: "☉", mera: "Т", kazna: "К" };
+export function letterFolders(letter) {
+  const folders = new Set([Object.hasOwn(SEALS, letter.from) ? letter.from : "mir"]);
+  for (const sender of letter.senders ?? []) if (Object.hasOwn(SEALS, sender)) folders.add(sender);
+  // Старые объединённые письма сохранили блоки Тренера, но не дополнительных отправителей.
+  if (letter.parts?.some((part) => part.t === "schedule" || (part.t === "mera" && part.kind !== "lag"))) folders.add("mera");
+  return [...folders];
+}
 
 let getDailies = () => null;
 
@@ -161,31 +174,64 @@ export function initMail(box, ctx, icon, dailies) {
   function windowNode() {
     const state = get();
     const root = el("div", "mail-window");
+    const sidebar = el("aside", "mail-sidebar");
+    const folders = el("nav", "mail-folders");
+    folders.setAttribute("aria-label", T.foldersLabel);
     const list = el("div", "mail-list");
     const pane = el("div", "mail-pane");
-    const letters = [...state.letters].reverse();
-    let openId = letters.find((l) => !l.read)?.id ?? letters[0]?.id;
+    const letters = [...state.letters].reverse().sort((a, b) => dayNum(b.day) - dayNum(a.day));
+    const first = letters.find((l) => !l.read) ?? letters[0];
+    let folder = first ? letterFolders(first)[0] : "mir";
+    let openId = first?.id;
+    const inFolder = (key) => letters.filter((letter) => letterFolders(letter).includes(key));
+    const folderButtons = new Map();
     const today = dayNum(todayKey());
+    const dateLabel = (day) => {
+      const n = today - dayNum(day);
+      return n === 0 ? T.today : n === 1 ? T.yesterday : fill(T.daysAgo, { n });
+    };
+    for (const key of Object.keys(SEALS)) {
+      if (key === "kazna" && !inFolder(key).length) continue;
+      const tab = el("button", "mail-folder");
+      tab.type = "button";
+      const seal = el("span", "mail-folder-seal", SEALS[key]);
+      seal.setAttribute("aria-hidden", "true");
+      const count = el("span", "mail-folder-count");
+      tab.append(seal, el("span", "", T.folders[key]), count);
+      tab.addEventListener("click", () => {
+        if (folder === key) return;
+        folder = key;
+        const matches = inFolder(folder);
+        openId = (matches.find((letter) => !letter.read) ?? matches[0])?.id;
+        list.scrollTop = 0;
+        show();
+      });
+      folders.append(tab);
+      folderButtons.set(key, { tab, count });
+    }
     const show = () => {
-      const cur = letters.find((l) => l.id === openId);
+      const matches = inFolder(folder);
+      const cur = matches.find((l) => l.id === openId);
       if (cur && !cur.read) {
         cur.read = true;
         save();
       }
+      for (const [key, { tab, count }] of folderButtons) {
+        const unread = inFolder(key).filter((letter) => !letter.read).length;
+        tab.setAttribute("aria-pressed", String(key === folder));
+        tab.setAttribute("aria-label", unread ? `${T.folders[key]}, ${fill(T.newCount, { n: unread })}` : T.folders[key]);
+        count.hidden = unread === 0;
+        count.textContent = String(unread);
+      }
       list.replaceChildren();
-      let lastDay = null;
-      for (const l of letters) {
-        if (l.day !== lastDay) {
-          lastDay = l.day;
-          const n = today - dayNum(l.day);
-          list.append(el("span", "mail-day", n === 0 ? T.today : n === 1 ? T.yesterday : fill(T.daysAgo, { n })));
-        }
-        const row = el("button", `mail-row from-${l.from}${l.id === openId ? " open" : ""}${l.read ? "" : " new"}`);
+      for (const l of matches) {
+        const sender = letterFolders(l)[0];
+        const row = el("button", `mail-row from-${sender}${l.id === openId ? " open" : ""}${l.read ? "" : " new"}`);
         row.type = "button";
         if (l.id === openId) row.setAttribute("aria-current", "true");
         const txt = el("span", "mail-row-text");
-        txt.append(el("span", "mail-row-title", l.title), el("span", "mail-row-from", T.from?.[l.from] ?? ""));
-        row.append(el("span", `mail-seal from-${l.from}`, SEALS[l.from] ?? "☉"), txt);
+        txt.append(el("span", "mail-row-title", l.title), el("span", "mail-row-from", dateLabel(l.day)));
+        row.append(el("span", `mail-seal from-${sender}`, SEALS[sender]), txt);
         if (!l.read) row.append(el("span", "mail-dot"));
         row.addEventListener("click", (event) => {
           openId = l.id;
@@ -194,22 +240,22 @@ export function initMail(box, ctx, icon, dailies) {
         });
         list.append(row);
       }
-      if (!letters.length) list.append(el("p", "mail-empty", T.empty));
-      list.append(el("p", "mail-note", T.archive));
+      if (!matches.length) list.append(el("p", "mail-empty", T.empty));
       pane.replaceChildren();
       if (cur) {
         const head = el("div", "mail-pane-head");
-        const n = today - dayNum(cur.day);
+        const sender = letterFolders(cur)[0];
         const who = el("span", "mail-pane-who");
-        who.append(el("b", "", T.from?.[cur.from] ?? ""), el("span", "", n === 0 ? T.today : n === 1 ? T.yesterday : fill(T.daysAgo, { n })));
-        head.append(el("span", `mail-seal big from-${cur.from}`, SEALS[cur.from] ?? "☉"), who);
+        who.append(el("b", "", T.from[sender]), el("span", "", dateLabel(cur.day)));
+        head.append(el("span", `mail-seal big from-${sender}`, SEALS[sender]), who);
         pane.append(head, el("h3", "", cur.title), cur.parts?.length ? partsNode(cur.parts, T.ui ?? {}, cur.day) : el("p", "mail-text", cur.text));
       }
       pane.append(el("p", "mail-rule", T.rule));
       pane.scrollTop = 0;
     };
     show();
-    root.append(list, pane);
+    sidebar.append(folders, list);
+    root.append(sidebar, pane);
     return root;
   }
 }
@@ -242,6 +288,7 @@ export function partsNode(parts, U, date) {
       box.append(levelsCard(levels, U));
     } else if (p.t === "mera") box.append(meraCard(p, U));
     else if (p.t === "schedule") box.append(scheduleCard(p, U, date));
+    else if (p.t === "text") box.append(el("p", "mail-text", p.text));
   }
   const day = sorted.find((p) => p.t === "day");
   const exp = sorted.find((p) => p.t === "exp");

@@ -131,7 +131,7 @@ export function initCard(ctx, getDailies) {
   let actPick = null;
 
   function open() {
-    ctx.modal.showNode("", build(), "modal-wide modal-card");
+    ctx.modal.showNode(T.title ?? "", build(), "modal-wide modal-card modal-profile");
   }
 
   function bar(cls, value, need, attr) {
@@ -197,6 +197,7 @@ export function initCard(ctx, getDailies) {
       portrait.append(img);
     }
     who.append(portrait, el("b", "card-name", ch.name ?? ""), el("span", "card-sub", ch.title ?? ""));
+    if (ch.status) who.append(el("span", "profile-status", ch.status));
     const ver = el("button", `card-verified${ch.verified ? " yes" : ""}`, ch.verified ? T.verified ?? "" : T.notVerified ?? "");
     ver.type = "button";
     const verNote = el("p", "card-note", ch.verified ? T.verifiedText ?? "" : T.verifyHow ?? "");
@@ -210,10 +211,12 @@ export function initCard(ctx, getDailies) {
     const path = el("div", "card-box card-path");
     path.append(el("span", "card-lab", T.path ?? ""));
     const pv = el("div", "card-path-val");
-    pv.append(el("b", "", fmt(P.got)), el("span", "", fill(T.pathOf, { could: fmt(P.could) })));
+    pv.append(el("b", "", fmt(P.got)), el("span", "", T.exp ?? ""));
     const pathProgress = P.got >= P.could ? T.pathComplete : fill(T.pathPct, { p: P.pct });
-    path.append(pv, bar("path", P.got, P.could), el("span", "card-mini", pathProgress));
-    left.append(path, soonRow);
+    const pathFooter = el("div", "profile-path-foot");
+    pathFooter.append(el("span", "profile-norm", fill(T.pathOf, { could: fmt(P.could) })), el("span", "card-mini", pathProgress));
+    path.append(pv, bar("path", P.got, P.could), pathFooter);
+    left.append(path);
     grid.append(left);
 
     // ---------- центр: силы и навыки ----------
@@ -239,6 +242,7 @@ export function initCard(ctx, getDailies) {
     powers.append(blue);
     // строку Тренера убрали (автор, 29.10): перекос — в письмах и в окне «Силы»
     let stat = will.level + intel.value;
+    const powerGrid = el("div", "profile-power-grid");
     for (const key of POWERS) {
       const f = flasks[key] ?? { level: 0, progress: 0 };
       const need = levelNeed(d.curve, f.level);
@@ -246,14 +250,17 @@ export function initCard(ctx, getDailies) {
       const row = el("div", `card-pow a-${key}`);
       const top = el("div", "card-pow-top");
       top.append(el("span", "card-pow-name", names[key] ?? key), el("span", "card-pow-left", fill(T.left, { n: f.level + 1, left: Math.max(0, need - f.progress) })), el("b", "card-pow-lvl", String(f.level)));
-      row.append(top, bar("pow", f.progress, need, key));
+      const icon = el("img", "profile-power-icon");
+      icon.src = ICON_DIR + ICONS[key];
+      icon.alt = "";
+      row.append(top, bar("pow", f.progress, need, key), icon);
       row.title = fill(T.left, { n: f.level + 1, left: Math.max(0, need - f.progress) });
-      powers.append(row);
+      powerGrid.append(row);
     }
     const statRow = el("div", "card-sum");
     statRow.title = T.statHint ?? "";
     statRow.append(el("span", "", T.stat ?? ""), el("b", "", String(stat)));
-    powers.append(statRow);
+    powers.append(powerGrid, statRow);
     mid.append(powers);
 
     const skills = el("div", "card-box");
@@ -302,13 +309,16 @@ export function initCard(ctx, getDailies) {
     // Знаки — в разработке (автор, 29.10)
     const signs = el("div", "card-box card-signs soon");
     signs.append(el("span", "card-lab", T.signs ?? ""), el("span", "card-mini", T.signsSoon ?? ""));
-    right.append(faces, mem, signs);
+    const later = el("details", "card-box profile-later");
+    later.append(el("summary", "", T.later ?? ""), faces, signs, soonRow);
+    right.append(mem);
     if (!others) {
       const health = el("button", "card-health", T.health ?? "");
       health.type = "button";
       health.addEventListener("click", () => document.dispatchEvent(new CustomEvent("hub:open-health")));
       right.append(health);
     }
+    right.append(later);
     grid.append(right);
 
     // ---------- низ: болото (график — на листе «Активность») ----------
