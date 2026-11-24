@@ -2911,6 +2911,11 @@ html.is-phone #stage .item.ui-scaled { display: none; }
   .mail-reader .mail-schedule-day img { width: 14px; height: 14px; }
   .mail-reader .mail-schedule-holidays { padding-top: 7px; }
 }
+@media (max-height: 340px) and (orientation: landscape) {
+  .mail-reader .mail-sidebar { gap: 5px; }
+  .mail-reader .mail-folders { gap: 2px; padding-bottom: 4px; }
+  .mail-reader .mail-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 
 /* Карточка персонажа: обзор сил, Путь и память. */
 .wood.modal.modal-card.modal-profile {

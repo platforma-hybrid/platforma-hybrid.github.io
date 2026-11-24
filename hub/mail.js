@@ -7,7 +7,8 @@ import { koloDate } from "./kolo.js";
 const KEY = "gibrid.mail.v1";
 const PER_DAY = 3;
 const KEEP_DAYS = 30;
-const SEALS = { mir: "☉", mera: "Т", gardener: "❧", kazna: "К" };
+const SEALS = { world: "☉", summary: "✦", mera: "Т", gardener: "❧", kazna: "К" };
+const SUMMARY_PARTS = new Set(["day", "period", "growth", "level", "open", "exp"]);
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -46,7 +47,7 @@ function save() {
 }
 
 /**
- * Положить письмо в почту. letter = { key, from: "mir" | "mera" | "gardener" | "kazna", title, text, parts? }.
+ * Положить письмо в почту. «mir» — личное письмо, «world» — общая весть. Вести идут отдельно от дневного лимита.
  * parts — табличка письма (день, уровни, Хранитель меры, неделя); text — то же простыми словами (запасной вид, позже — Эхо).
  * key — чтобы одно и то же событие не пришло дважды. Четвёртое и дальше письмо дня складывается в третье.
  */
@@ -54,7 +55,7 @@ export function addLetter(state, letter, day = todayKey()) {
   if (letter.key && state.keys.includes(letter.key)) return false;
   if (letter.key) state.keys = [...state.keys, letter.key].slice(-600);
   // приветствие не съедает дневной лимит
-  const todays = state.letters.filter((l) => l.day === day && l.key !== "welcome");
+  const todays = letter.from === "world" ? [] : state.letters.filter((l) => l.day === day && l.key !== "welcome" && l.from !== "world");
   // одно событие одного рода за день — одним письмом (несколько новых уровней → «Новые уровни»)
   const same = letter.group && todays.find((l) => l.group === letter.group);
   // больше трёх в день — складываем в последнее письмо того же отправителя (или просто в последнее)
@@ -62,13 +63,13 @@ export function addLetter(state, letter, day = todayKey()) {
   if (into) {
     if (same && letter.groupTitle) into.title = letter.groupTitle;
     const sender = letter.from ?? "mir";
-    if (into.from !== sender) into.senders = [...new Set([...(into.senders ?? []), sender])];
+    const mixed = folderOf(into.from) !== folderOf(sender);
     // чужое письмо внутри — с заголовком, если текст его ещё не повторяет
     const head = same || into.from === sender || String(letter.text).startsWith(letter.title) ? "" : `${letter.title}. `;
-    if (into.parts?.length || letter.parts?.length) {
+    if (mixed || into.parts?.length || letter.parts?.length) {
       const earlier = into.parts?.length ? into.parts : [{ t: "text", text: into.text }];
       const later = letter.parts?.length ? letter.parts : [{ t: "text", text: head + letter.text }];
-      into.parts = [...earlier, ...later];
+      into.parts = [...earlier, ...(mixed ? later.map((part) => ({ ...part, from: sender })) : later)];
     }
     into.text = `${into.text}${same ? "\n" : "\n\n"}${head}${letter.text}`;
     into.read = false;
@@ -134,12 +135,28 @@ export function postMail(letter) {
 
 export const unreadCount = (state = get()) => state.letters.filter((l) => !l.read).length;
 
-export function letterFolders(letter) {
-  const folders = new Set([Object.hasOwn(SEALS, letter.from) ? letter.from : "mir"]);
-  for (const sender of letter.senders ?? []) if (Object.hasOwn(SEALS, sender)) folders.add(sender);
-  // Старые объединённые письма сохранили блоки Тренера, но не дополнительных отправителей.
-  if (letter.parts?.some((part) => part.t === "schedule" || (part.t === "mera" && part.kind !== "lag"))) folders.add("mera");
-  return [...folders];
+function folderOf(sender) {
+  return Object.hasOwn(SEALS, sender) ? sender : "summary";
+}
+
+function partFolder(part, primary) {
+  if (part.from && part.from !== "world") return folderOf(part.from);
+  if (part.t === "schedule" || (part.t === "mera" && part.kind !== "lag")) return "mera";
+  if (SUMMARY_PARTS.has(part.t) || part.kind === "lag") return "summary";
+  return primary;
+}
+
+export function letterSections(letter) {
+  const primary = folderOf(letter.from);
+  if (primary === "world" || !letter.parts?.length) return [{ folder: primary, parts: letter.parts }];
+  const views = new Map([[primary, []]]);
+  for (const part of letter.parts) {
+    // Legacy letters lack a sender tag on parts. Their structured blocks still identify the section.
+    const folder = partFolder(part, primary);
+    if (!views.has(folder)) views.set(folder, []);
+    views.get(folder).push(part);
+  }
+  return [...views].filter(([, parts]) => parts.length).map(([folder, parts]) => ({ folder, parts }));
 }
 
 let getDailies = () => null;
@@ -167,6 +184,11 @@ export function initMail(box, ctx, icon, dailies) {
   document.addEventListener("hub:mail-changed", paint);
   // первое письмо — приветствие Мира
   if (!get().letters.length && !get().keys.length) postMail({ key: "welcome", from: "mir", title: T.welcomeTitle, text: T.welcomeText });
+  const currentDay = dayNum(todayKey());
+  for (const news of T.worldNews ?? []) {
+    const age = currentDay - dayNum(news.day);
+    if (age >= 0 && age <= KEEP_DAYS && addLetter(get(), { ...news, key: `world-${news.key}`, from: "world" }, news.day)) save();
+  }
   paint();
 
   button.addEventListener("click", () => ctx.modal.showNode(T.title ?? "", windowNode(), "modal-wide modal-mail mail-reader"));
@@ -180,10 +202,15 @@ export function initMail(box, ctx, icon, dailies) {
     const list = el("div", "mail-list");
     const pane = el("div", "mail-pane");
     const letters = [...state.letters].reverse().sort((a, b) => dayNum(b.day) - dayNum(a.day));
-    const first = letters.find((l) => !l.read) ?? letters[0];
-    let folder = first ? letterFolders(first)[0] : "mir";
-    let openId = first?.id;
-    const inFolder = (key) => letters.filter((letter) => letterFolders(letter).includes(key));
+    const entries = letters.flatMap((letter) => letterSections(letter).map(({ folder, parts }) => {
+      const title = folder === folderOf(letter.from) ? letter.title
+        : folder === "mera" && parts?.some((part) => part.t === "schedule") ? T.schedule.title : T.folders[folder];
+      return { folder, parts, title, letter };
+    }));
+    const first = entries.find(({ letter }) => !letter.read) ?? entries[0];
+    let folder = first?.folder ?? "summary";
+    let openId = first?.letter.id;
+    const inFolder = (key) => entries.filter((entry) => entry.folder === key);
     const folderButtons = new Map();
     const today = dayNum(todayKey());
     const dateLabel = (day) => {
@@ -202,7 +229,7 @@ export function initMail(box, ctx, icon, dailies) {
         if (folder === key) return;
         folder = key;
         const matches = inFolder(folder);
-        openId = (matches.find((letter) => !letter.read) ?? matches[0])?.id;
+        openId = (matches.find(({ letter }) => !letter.read) ?? matches[0])?.letter.id;
         list.scrollTop = 0;
         show();
       });
@@ -211,27 +238,26 @@ export function initMail(box, ctx, icon, dailies) {
     }
     const show = () => {
       const matches = inFolder(folder);
-      const cur = matches.find((l) => l.id === openId);
-      if (cur && !cur.read) {
-        cur.read = true;
+      const cur = matches.find(({ letter }) => letter.id === openId);
+      if (cur && !cur.letter.read) {
+        cur.letter.read = true;
         save();
       }
       for (const [key, { tab, count }] of folderButtons) {
-        const unread = inFolder(key).filter((letter) => !letter.read).length;
+        const unread = inFolder(key).filter(({ letter }) => !letter.read).length;
         tab.setAttribute("aria-pressed", String(key === folder));
         tab.setAttribute("aria-label", unread ? `${T.folders[key]}, ${fill(T.newCount, { n: unread })}` : T.folders[key]);
         count.hidden = unread === 0;
         count.textContent = String(unread);
       }
       list.replaceChildren();
-      for (const l of matches) {
-        const sender = letterFolders(l)[0];
-        const row = el("button", `mail-row from-${sender}${l.id === openId ? " open" : ""}${l.read ? "" : " new"}`);
+      for (const { letter: l, title } of matches) {
+        const row = el("button", `mail-row from-${folder}${l.id === openId ? " open" : ""}${l.read ? "" : " new"}`);
         row.type = "button";
         if (l.id === openId) row.setAttribute("aria-current", "true");
         const txt = el("span", "mail-row-text");
-        txt.append(el("span", "mail-row-title", l.title), el("span", "mail-row-from", dateLabel(l.day)));
-        row.append(el("span", `mail-seal from-${sender}`, SEALS[sender]), txt);
+        txt.append(el("span", "mail-row-title", title), el("span", "mail-row-from", dateLabel(l.day)));
+        row.append(el("span", `mail-seal from-${folder}`, SEALS[folder]), txt);
         if (!l.read) row.append(el("span", "mail-dot"));
         row.addEventListener("click", (event) => {
           openId = l.id;
@@ -243,12 +269,12 @@ export function initMail(box, ctx, icon, dailies) {
       if (!matches.length) list.append(el("p", "mail-empty", T.empty));
       pane.replaceChildren();
       if (cur) {
+        const { letter, title, parts } = cur;
         const head = el("div", "mail-pane-head");
-        const sender = letterFolders(cur)[0];
         const who = el("span", "mail-pane-who");
-        who.append(el("b", "", T.from[sender]), el("span", "", dateLabel(cur.day)));
-        head.append(el("span", `mail-seal big from-${sender}`, SEALS[sender]), who);
-        pane.append(head, el("h3", "", cur.title), cur.parts?.length ? partsNode(cur.parts, T.ui ?? {}, cur.day) : el("p", "mail-text", cur.text));
+        who.append(el("b", "", T.from[folder]), el("span", "", dateLabel(letter.day)));
+        head.append(el("span", `mail-seal big from-${folder}`, SEALS[folder]), who);
+        pane.append(head, el("h3", "", title), parts?.length ? partsNode(parts, T.ui ?? {}, letter.day) : el("p", "mail-text", letter.text));
       }
       pane.append(el("p", "mail-rule", T.rule));
       pane.scrollTop = 0;
