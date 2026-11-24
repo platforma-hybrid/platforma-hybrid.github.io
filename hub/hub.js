@@ -1229,7 +1229,6 @@ function createDailies(box, ctx) {
     if (had && had.tier === tier.id) {
       state.bought = state.bought.filter((b) => b !== had);
       settleDayWallet(state, state);
-      toast(`${t.undone} ${had.name}, +${had.price} ${t.refund}`);
       return commit();
     }
     const back = had?.price ?? 0;
@@ -1237,22 +1236,27 @@ function createDailies(box, ctx) {
     const name = tier.label ? `${item.name} · ${tier.label}` : item.name;
     state.bought = [...state.bought.filter((b) => b !== had), { id: item.id, tier: tier.id, name, price: tier.price }];
     settleDayWallet(state, state);
-    toast(`${t.bought} ${name}`);
     commit();
   }
   function buildWeak() {
+    const active = document.activeElement;
+    const activeTier = weak.contains(active) ? active.dataset.weakTier : null;
+    const scrollTop = weak.querySelector(".dailies-weak-grid")?.scrollTop ?? 0;
     weak.replaceChildren();
     const spent = state.bought.reduce((sum, b) => sum + b.price, 0);
     const head = el("div", "dailies-lib-head");
-    head.append(el("h3", "", t.yellowTitle), el("span", "dailies-lib-count", spent ? fill(WK.spent, { n: spent }) : WK.clean ?? ""));
-    weak.append(head, el("p", "dailies-weak-hint", t.yellowHint));
+    const marked = state.bought.length;
+    const count = el("span", `dailies-lib-count${marked ? "" : " is-clean"}`, marked ? fill(WK.marked, { n: marked }) : WK.clean ?? "");
+    head.append(el("h3", "", WK.open ?? ""), count);
+    weak.append(head, el("p", "dailies-weak-hint", WK.hint ?? ""));
     const grid = el("div", "dailies-weak-grid");
     for (const item of buyList) {
       const had = boughtOf(item.id);
       const card = el("div", `dailies-weak-card${had ? " on" : ""}`);
       const top = el("div", "dailies-weak-top");
-      const weakSymbol = el("span", "daily-weak-symbol", WK.symbols?.[item.id]);
+      const weakSymbol = el("span", "daily-weak-symbol");
       weakSymbol.setAttribute("aria-hidden", "true");
+      weakSymbol.append(el("span", "", WK.symbols?.[item.id] ?? ""));
       const label = el("div", "daily-weak-label");
       label.append(el("b", "dailies-weak-name", item.name));
       if (item.note) label.append(el("span", "dailies-weak-note", item.note));
@@ -1264,7 +1268,9 @@ function createDailies(box, ctx) {
         const btn = el("button", `dailies-weak-tier${on ? " on" : ""}`);
         btn.type = "button";
         btn.append(el("span", "", tier.label || WK.was || ""), el("b", "", String(tier.price)));
+        btn.dataset.weakTier = `${item.id}:${tier.id}`;
         btn.setAttribute("aria-pressed", on ? "true" : "false");
+        btn.setAttribute("aria-label", `${item.name} · ${tier.label || WK.was} · ${tier.price} ${t.cards.exp}`);
         btn.disabled = state.closed || (!on && available() + (had?.price ?? 0) < tier.price);
         btn.addEventListener("click", () => chooseTier(item, tier));
         tiers.append(btn);
@@ -1273,6 +1279,11 @@ function createDailies(box, ctx) {
       grid.append(card);
     }
     weak.append(grid);
+    grid.scrollTop = scrollTop;
+    if (activeTier) {
+      const button = [...grid.querySelectorAll("[data-weak-tier]")].find((node) => node.dataset.weakTier === activeTier);
+      button?.focus({ preventScroll: true });
+    }
     // полоса: что ушло сегодня
     weakSum.replaceChildren();
     if (!state.bought.length) weakSum.append(el("span", "dailies-weak-clean", WK.clean ?? ""));

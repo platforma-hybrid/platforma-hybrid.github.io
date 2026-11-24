@@ -738,8 +738,77 @@
   border-radius: 5px;
   font: 400 24px var(--font-text);
 }
-.modal-quests-day .in-quests .dailies-weak { height: 450px; max-height: 450px; }
-.modal-quests-day .in-quests .dailies-weak-card { background: linear-gradient(110deg, #17140f, #1b1711); }
+.modal-quests-day .in-quests .dailies-weak {
+  height: 434px;
+  max-height: 434px;
+  padding: 16px 22px 10px;
+  gap: 8px;
+  background: #100d09ec;
+  overflow: hidden;
+}
+.modal-quests-day .dailies-weak .dailies-lib-head {
+  flex: none;
+  min-height: 38px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #9d773c;
+}
+.modal-quests-day .dailies-weak .dailies-lib-head h3 { font-size: 27px; color: #efd199; }
+.modal-quests-day .in-quests .dailies-weak-hint,
+.modal-quests-day .dailies-weak .dailies-lib-count { color: #ccba98; font-size: 18px; }
+.modal-quests-day .dailies-weak .dailies-lib-count.is-clean { color: #aad184; }
+.modal-quests-day .in-quests .dailies-weak-grid {
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #967139 transparent;
+}
+.modal-quests-day .in-quests .dailies-weak-card {
+  grid-template-columns: 420px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 58px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid #8266376e;
+  background: transparent;
+}
+.modal-quests-day .in-quests .dailies-weak-card.on { background: linear-gradient(90deg, #7538222b, #5b2b1c32); }
+.modal-quests-day .dailies-weak-top { align-items: center; gap: 13px; min-width: 0; }
+.modal-quests-day .daily-weak-symbol {
+  width: 39px;
+  height: 39px;
+  box-sizing: border-box;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid #9a763f;
+  border-radius: 50%;
+  background: #2a2012;
+  color: #dcb779;
+  font-size: 21px;
+  line-height: 1;
+  filter: none;
+}
+.modal-quests-day .daily-weak-symbol span { filter: grayscale(1) sepia(1); }
+.modal-quests-day .in-quests .dailies-weak-name { font-size: 22px; }
+.modal-quests-day .dailies-weak-note { color: #c7b694; font-size: 15px; line-height: 1.2; }
+.modal-quests-day .dailies-weak-tiers { justify-content: flex-end; gap: 7px; }
+.modal-quests-day .dailies-weak-tier {
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid #977342;
+  border-radius: 3px;
+  background: #271e13;
+  color: #e8d5aa;
+  font-size: 17px;
+}
+.modal-quests-day .dailies-weak-tier b { padding-left: 7px; border-left: 1px solid #8a693e80; color: #f3cd82; }
+.modal-quests-day .dailies-weak-tier.on { border-color: #dc9b66; background: #693a25; color: #fff0d8; box-shadow: none; }
+.modal-quests-day .dailies-weak-tier.on::before { content: "✓"; color: #f6c18d; }
+.modal-quests-day .dailies-weak-tier:disabled { opacity: .64; border-color: #634c2e; background: #1a1510; }
 .modal-quests-day .in-quests .dailies-mine { max-height: none; }
 .modal-quests-day .daily-card-grid {
   grid-template-columns: 181px 10px 176px 10px 175px 9px 178px 8px 175px 11px 176px;
@@ -1009,6 +1078,28 @@
   border-radius: 5px;
   font: 400 24px var(--font-text);
 }
+.modal-quests-day .in-quests.weak-open .dailies-foot { left: 303px; width: 690px; justify-content: flex-start; }
+.modal-quests-day .in-quests.weak-open .daily-card-wallet-result:not([hidden]) {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  width: auto;
+  text-align: left;
+  font: 400 21px var(--font-text);
+}
+.modal-quests-day .in-quests.weak-open .daily-card-wallet-result strong { font: 400 28px var(--font-text); }
+.modal-quests-day .in-quests.weak-open .dailies-yellow { left: 1036px; top: 846px; width: 207px; height: 60px; z-index: 2; }
+.modal-quests-day .in-quests.weak-open .dailies-yellow h3 { display: none; }
+.modal-quests-day .in-quests.weak-open .dailies-weak-btn {
+  width: 207px;
+  height: 49px;
+  border: 1px solid #c7a55f;
+  border-radius: 5px;
+  background: #302617;
+  color: #f2d89f;
+  font: 400 24px var(--font-text);
+}
+.modal-quests-day .in-quests.weak-open .dailies-weak-btn:hover { background: #3b2e1a; }
 .modal-quests-day .in-quests .dailies-admin { left: 228px; top: 942px; gap: 18px; }
 .modal-quests-day .dailies-admin-label { color: #dfc099; font: 400 19px var(--font-text); letter-spacing: normal; text-transform: none; }
 .modal-quests-day .dailies-admin-btn { padding: 7px 16px; border-width: 1px; border-radius: 4px; font: 400 20px var(--font-text); }
