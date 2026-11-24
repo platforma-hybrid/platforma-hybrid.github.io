@@ -12,7 +12,7 @@ import { addPoints, convertFlask, fractionalLevel, levelNeed, migrateFlask } fro
 import { dayNum as dayNumOf, stepDown, stepStatus, stepUp } from "./steps.js";
 import { dayNet, initWallet, settleDayWallet } from "./wallet.js";
 import { initCard } from "./card.js";
-import { needAnketa, openAnketa, openHealth, startSteps } from "./anketa.js";
+import { needAnketa, openHealth, startSteps } from "./anketa.js";
 import { fill as fillMail, initMail, periodSummaries, postMail } from "./mail.js";
 import { createDailyCards } from "./daily-cards.js";
 import { PROGRESS_RESET_KEY } from "./admin.js";
@@ -898,12 +898,6 @@ function createDailies(box, ctx) {
     }
   }
 
-  // анкета входа (28.10, SPEC_HEALTH §2): при первом открытии «Заданий» — сначала анкета
-  document.addEventListener("hub:quests-open", (event) => {
-    if (!needAnketa()) return;
-    event.stopImmediatePropagation();
-    openAnketa(ctx);
-  });
   document.addEventListener("hub:open-health", () => openHealth(ctx, {
     active: gentleToday(),
     careful: Boolean(state.careful),
@@ -1790,7 +1784,7 @@ function createDailies(box, ctx) {
     if (editMode) return;
     // 17.10 (автор): день, неделя и месяц — одно окно «Задания» на одном фоне; табличка открывает его на вкладке «День»
     if (ctx.questsUi) {
-      document.dispatchEvent(new CustomEvent("hub:quests-open", { detail: { tab: "day" } }));
+      ctx.questsUi.open("day");
       return;
     }
     const open = board.hidden;
@@ -2086,11 +2080,6 @@ async function main() {
   buildStage(stage, ctx);
   ctx.modal = createModal(stage, texts);
   ctx.questsUi = initQuests(ctx, () => lastDailies);
-  // анкета входа: «Задания» из меню тоже сначала ведут в анкету (28.10)
-  if (ctx.questsUi?.open) {
-    const realOpen = ctx.questsUi.open.bind(ctx.questsUi);
-    ctx.questsUi.open = (...args) => (needAnketa() ? openAnketa(ctx) : realOpen(...args));
-  }
   ctx.achievementsUi = initAchievements(ctx, () => lastDailies);
   ctx.statsUi = initStats(ctx, () => lastDailies);
   ctx.skillsUi = initSkills(ctx, () => lastDailies);
