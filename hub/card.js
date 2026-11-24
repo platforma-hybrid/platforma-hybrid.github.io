@@ -7,6 +7,7 @@
 import { intellectOf, masteryNow, balanceOf, careNow } from "./skills.js";
 import { levelNeed, fractionalLevel, totalPoints, addPoints } from "./levels.js";
 import { gradeDay, koloDate } from "./kolo.js";
+import { resetAllProgress } from "./admin.js";
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -20,6 +21,49 @@ const dayDate = (key) => {
   return new Date(y, (m || 1) - 1, d || 1);
 };
 const fmt = (n) => Math.round(n).toLocaleString("ru-RU");
+
+function confirmReset(trigger, text) {
+  const dialog = el("dialog", "card-reset-dialog");
+  dialog.setAttribute("aria-labelledby", "card-reset-title");
+  dialog.setAttribute("aria-describedby", "card-reset-description");
+
+  const title = el("h2", "", text.title);
+  title.id = "card-reset-title";
+  const description = el("p", "", text.description);
+  description.id = "card-reset-description";
+  const actions = el("div", "card-reset-actions");
+  const cancel = el("button", "", text.cancel);
+  const confirm = el("button", "card-reset-apply", text.confirm);
+  const error = el("p", "card-reset-error");
+  error.setAttribute("role", "status");
+  cancel.type = confirm.type = "button";
+
+  cancel.addEventListener("click", () => dialog.close());
+  confirm.addEventListener("click", () => {
+    confirm.disabled = true;
+    try {
+      resetAllProgress();
+    } catch {
+      error.textContent = text.error;
+      confirm.disabled = false;
+      return;
+    }
+    window.location.reload();
+  });
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") event.stopPropagation();
+  });
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+    trigger.focus();
+  }, { once: true });
+
+  actions.append(cancel, confirm);
+  dialog.append(title, description, actions, error);
+  document.body.append(dialog);
+  dialog.showModal();
+  cancel.focus();
+}
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 const POWERS = ["strength", "endurance", "agility", "order", "calm", "morality"];
@@ -349,6 +393,12 @@ export function initCard(ctx, getDailies) {
       if (!hist.length) list.append(el("span", "card-mini", T.noDays ?? ""));
       swamp.append(list);
       root.append(swamp);
+      if (T.reset) {
+        const reset = el("button", "card-reset", T.reset.open);
+        reset.type = "button";
+        reset.addEventListener("click", () => confirmReset(reset, T.reset));
+        root.append(reset);
+      }
     }
     return root;
   }

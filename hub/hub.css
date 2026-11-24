@@ -2042,24 +2042,24 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .adm-sub { margin: 6px 0 2px; color: #ffd27a; }
 .adm-help { margin: 6px 0 0; color: #a9bcc8; font-size: 12px; }
 
-.hub-admin-entry {
+:is(.hub-admin-entry, .card-reset-dialog) {
   position: fixed; inset: 0; margin: auto; isolation: isolate;
   width: min(500px, calc(100vw - 28px)); height: fit-content; max-height: calc(100dvh - 16px);
   padding: 42px 42px 38px; color: #eddbb5; text-align: center;
   background: none; border: 0; box-shadow: none; box-sizing: border-box;
 }
-.hub-admin-entry::backdrop { background: #0907059e; }
-.hub-admin-entry::before, .hub-admin-entry::after {
+:is(.hub-admin-entry, .card-reset-dialog)::backdrop { background: #0907059e; }
+:is(.hub-admin-entry, .card-reset-dialog)::before, :is(.hub-admin-entry, .card-reset-dialog)::after {
   content: ""; position: absolute; pointer-events: none; z-index: -1;
 }
-.hub-admin-entry::before {
+:is(.hub-admin-entry, .card-reset-dialog)::before {
   inset: 9px; background: radial-gradient(ellipse at center top, #332719, #130f0a 74%);
   clip-path: polygon(3% 0, 97% 0, 100% 7%, 100% 93%, 97% 100%, 3% 100%, 0 93%, 0 7%);
 }
-.hub-admin-entry::after {
+:is(.hub-admin-entry, .card-reset-dialog)::after {
   inset: 0; background: url('/assets/hub/ui/frame/frame_window.png') center / 100% 100% no-repeat;
 }
-.hub-admin-entry > h2 {
+:is(.hub-admin-entry, .card-reset-dialog) > h2 {
   margin: 0 18px 10px; font: 700 32px/1.16 var(--font-title); color: #f5d386;
 }
 .hub-admin-entry > h2:focus { outline: none; }
@@ -2071,7 +2071,7 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .hub-admin-login { font: 18px/1.4 var(--font-text); }
 .hub-admin-login p { margin: 0 0 16px; }
 .hub-admin-login small { display: block; margin-top: 12px; color: #cbb78c; font-size: 15px; }
-.hub-admin-confirm {
+.hub-admin-confirm, .card-reset-actions button {
   display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
   box-sizing: border-box; padding: 8px 20px; border: 1px solid #ba9660; border-radius: 5px;
   background: linear-gradient(#41301c, #20170f); color: #f3d394;
@@ -2082,9 +2082,15 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .hub-admin-login .hub-admin-status { color: #cbb78c; margin: 8px 0 0; font-size: 15px; }
 .hub-admin-status:empty, .hub-admin-login [hidden] { display: none; }
 .hub-admin-login button.hub-admin-confirm { margin-top: 10px; }
+.card-reset-dialog > p { margin: 0 0 16px; font: 17px/1.4 var(--font-text); }
+.card-reset-dialog .card-reset-error { margin: 10px 0 0; color: #f4baa9; }
+.card-reset-error:empty { display: none; }
+.card-reset-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.card-reset-actions button { font-size: 17px; padding-inline: 13px; }
+.card-reset-actions .card-reset-apply { background: linear-gradient(#552a1d, #30160e); border-color: #ba7b62; }
 @media (max-height: 470px) {
-  .hub-admin-entry { padding: 30px 38px 28px; }
-  .hub-admin-entry > h2 { font-size: 28px; }
+  :is(.hub-admin-entry, .card-reset-dialog) { padding: 30px 38px 28px; }
+  :is(.hub-admin-entry, .card-reset-dialog) > h2 { font-size: 28px; }
 }
 .adm-banner { position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 3001; display: flex; align-items: center; gap: 12px; padding: 6px 14px;
   background: #b5341f; color: #fff; border-radius: 0 0 8px 8px; font: 14px system-ui, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
@@ -2996,6 +3002,11 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .modal-profile .profile-later .card-soon-row { border: 0; padding: 4px 0; }
 .modal-profile .profile-later > summary, .modal-profile .card-swamp > summary { cursor: pointer; }
 .modal-profile .card-health { border-radius: 4px; text-align: left; padding: 8px 14px; }
+.modal-profile .card-reset {
+  align-self: flex-start; min-height: 36px; padding: 6px 14px; border: 1px solid #a06853; border-radius: 4px;
+  background: #43221958; color: #edbea6; font: 16px var(--font-text); cursor: pointer;
+}
+.modal-profile .card-reset:hover { background: #59332299; }
 @media (orientation: landscape) and (max-height: 540px) {
   .wood.modal.modal-card.modal-profile { width: min(1080px, calc(100vw - 22px)); padding: 18px 28px 23px; max-height: calc(100dvh - 11px); }
   .wood.modal.modal-card.modal-profile > .modal-close { top: 12px; right: 20px; width: 38px; height: 38px; }
