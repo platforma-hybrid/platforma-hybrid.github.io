@@ -2292,6 +2292,37 @@ html.is-phone #stage .item.ui-scaled { display: none; }
 .modal-wallet .wallet-soon p { font-size: 15px; }
 .modal-wallet .wallet-day-head { font-size: 17px; }
 
+@media (orientation: landscape) and (max-height: 540px) {
+  .ph-modal .modal.modal-wallet.modal-wide {
+    display: flex; flex-direction: column;
+    box-sizing: border-box; zoom: 1;
+    width: min(820px, calc(100vw - 26px)); height: min(475px, calc(100dvh - 16px));
+    max-width: none; min-height: 0; max-height: none;
+    padding: 13px 21px 16px; overflow: hidden;
+  }
+  .ph-modal .modal.modal-wallet h2 { margin: 0 44px 8px; font-size: 26px; }
+  .ph-modal .modal.modal-wallet > .modal-body,
+  .ph-modal .modal-wallet .wallet-window { flex: 1; min-height: 0; min-width: 0; }
+  .ph-modal .modal.modal-wallet > .modal-body { display: flex; }
+  .ph-modal .modal-wallet .wallet-window { gap: 7px; }
+  .ph-modal .modal-wallet .wallet-nums > .wallet-big {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+    gap: 1px 8px; padding: 5px 10px;
+  }
+  .ph-modal .modal-wallet .wallet-nums .wallet-big b { grid-column: 2; grid-row: 1 / span 2; font-size: 27px; }
+  .ph-modal .modal-wallet .wallet-nums .wallet-big-hint { grid-column: 1; grid-row: 2; }
+  .ph-modal .modal-wallet .wallet-window > .wallet-tabs > .wallet-tab { min-height: 33px; padding: 4px 8px; }
+  .ph-modal .modal-wallet .wallet-pane { flex: 1; min-height: 0; max-height: none; overscroll-behavior: contain; }
+  .ph-modal .modal.modal-wallet .wallet-kazna { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 9px; }
+  .ph-modal .modal-wallet .wallet-side { gap: 8px; }
+  .ph-modal .modal-wallet .wallet-hist,
+  .ph-modal .modal-wallet .wallet-card { padding: 8px 9px; }
+  .ph-modal .modal-wallet .wallet-day-head { flex-wrap: wrap; gap: 2px 8px; }
+  .ph-modal .modal-wallet .wallet-row { gap: 8px; }
+  .ph-modal .modal-wallet .wallet-row b { min-width: 34px; }
+  .ph-modal .modal-wallet .wallet-line { gap: 7px; font-size: 14px; }
+}
+
 /* подходы без яркой кнопки (27.10): кружки — это и есть кнопка; число подхода — в названии; награда — приглушённым золотом */
 .dailies-sets.ui-dots .dailies-plus { display: none; }
 .dailies-sets.ui-dots .dailies-dots { gap: 7px; }
@@ -2955,10 +2986,27 @@ html.is-phone #stage .item.ui-scaled { display: none; }
   .mail-reader .mail-schedule-day img { width: 14px; height: 14px; }
   .mail-reader .mail-schedule-holidays { padding-top: 7px; }
 }
+@media (orientation: landscape) and (max-height: 430px) {
+  .mail-reader .mail-pane:has(.mail-period-card) { padding: 7px 12px 6px; gap: 4px; }
+  .mail-reader .mail-pane:has(.mail-period-card) .mail-pane-head,
+  .mail-reader .mail-period-card .mail-card-head { display: none; }
+  .wood.modal.modal-mail.mail-reader .mail-pane:has(.mail-period-card) h3 { font-size: 20px; }
+  .mail-reader .mail-period-card {
+    gap: 1px; padding: 5px 0 0; border: 0; border-top: 1px solid var(--mail-rule-color); border-radius: 0; background: none;
+  }
+  .modal.modal-mail.mail-reader .mail-period-card .mail-line { font-size: 14px; line-height: 1.14; }
+  .modal.modal-mail.mail-reader .mail-period-card .mail-card-note { margin: 4px 0 0; font-size: 13px; line-height: 1.25; }
+  .mail-reader .mail-period-card .mail-kolo-go { min-height: 27px; margin-top: 3px; }
+}
 @media (max-height: 340px) and (orientation: landscape) {
   .mail-reader .mail-sidebar { gap: 5px; }
   .mail-reader .mail-folders { gap: 2px; padding-bottom: 4px; }
-  .mail-reader .mail-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mail-reader .mail-folder { min-height: 24px; padding-block: 2px; font-size: 13px; }
+  .mail-reader .mail-list { gap: 4px; padding-bottom: 1px; }
+  .mail-reader .mail-row { min-height: 37px; gap: 5px; padding: 3px 6px; }
+  .mail-reader .mail-row .mail-seal { width: 21px; height: 21px; font-size: 13px; }
+  .mail-reader .mail-row-title { font-size: 13px; line-height: 1.15; overflow-wrap: break-word; }
+  .mail-reader .mail-row-from { font-size: 12px; }
 }
 
 /* Карточка персонажа: обзор сил, Путь и память. */
@@ -3119,4 +3167,10 @@ html.is-phone #stage .item.ui-scaled { display: none; }
   .modal-profile .profile-power-grid .card-pow-lvl { font-size: 18px; }
   .modal-profile .profile-power-grid .profile-power-icon { width: 22px; height: 22px; padding: 2px; }
   .modal-profile .card-mid > .card-box:first-child .card-sum { padding-block: 4px; }
+}
+
+@media (orientation: landscape) and (max-width: 739px) and (max-height: 540px) {
+  .ph-modal .modal-profile .profile-power-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ph-modal .modal-profile .profile-power-grid .card-pow-top { grid-column: 1 / -1; }
+  .ph-modal .modal-profile .profile-power-grid .profile-power-icon { align-self: end; width: 18px; height: 18px; }
 }

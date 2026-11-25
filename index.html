@@ -82,7 +82,13 @@ if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor("#070604"); tg.setBac
 // Ключ открытки: Telegram кладёт его в start_param; запасные пути — адрес страницы (tgWebAppStartParam в ?… или #…) и ?k= для проверки в браузере.
 const fromUrl = (name) => new URLSearchParams(location.search).get(name) || new URLSearchParams(location.hash.slice(1)).get(name);
 const param = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || fromUrl("tgWebAppStartParam") || fromUrl("startapp") || fromUrl("k") || "";
-const key = (param.match(/^k_([0-9a-f]{12})$/) || [])[1];
+const key = (param.match(/^p_([0-9a-f]{12})$/) || [])[1];
+const oldCard = /^k_[0-9a-f]{12}$/.test(param);
+
+function openEcho(payload) {
+  const link = `https://t.me/${BOT}?start=${payload}`;
+  if (tg && tg.openTelegramLink) { tg.openTelegramLink(link); setTimeout(() => tg.close(), 400); } else location.href = link;
+}
 
 const $ = (id) => document.getElementById(id);
 const vid = $("vid"), still = $("still"), panel = $("panel"), dots = $("dots"), hand = $("hand"), ring = $("ring");
@@ -226,31 +232,47 @@ function sealed() {
   holdStart = 0; busy = true; haptic("heavy");
   hand.classList.add("hidden"); panel.style.opacity = 0;
   if (tg && tg.BackButton) tg.BackButton.hide();
-  vid.loop = false; vid.src = "open.mp4"; still.src = "open.jpg"; $("blur").src = "open.jpg";
-  vid.oncanplay = () => { vid.style.opacity = 1; vid.play().catch(() => {}); };
-  setTimeout(() => haptic("ok"), 3300);
+  vid.pause(); vid.autoplay = false; vid.loop = false; vid.oncanplay = null;
+  vid.style.opacity = 0;
+  let watchdog, pulse;
   const finish = () => {
     if (finish.done) return; finish.done = true;
+    clearTimeout(watchdog); clearTimeout(pulse);
+    vid.onplaying = vid.onended = vid.onerror = null;
+    if (!vid.ended) { vid.pause(); vid.style.opacity = 0; }
+    still.src = $("blur").src = "open.jpg";
     panel.innerHTML = `<div class="inner"><div class="enter"><img class="sign" src="sign.png" alt=""><button class="go" id="enter">Войти в Круг</button></div></div>`;
     panel.style.opacity = 1;
-    $("enter").onclick = () => {
-      const link = `https://t.me/${BOT}?start=s_${key}`;
-      if (tg && tg.openTelegramLink) { tg.openTelegramLink(link); setTimeout(() => tg.close(), 400); } else location.href = link;
-    };
+    $("enter").onclick = () => openEcho(`s_${key}`);
   };
-  vid.onended = finish; setTimeout(finish, 7500);
+  // До первого кадра ролика остаётся закрытая дверь. Открытая картинка нужна только в финале.
+  vid.onplaying = () => {
+    vid.onplaying = null;
+    vid.style.opacity = 1;
+    clearTimeout(watchdog);
+    watchdog = setTimeout(finish, Number.isFinite(vid.duration) ? vid.duration * 1000 + 1200 : 7500);
+    pulse = setTimeout(() => haptic("ok"), 3300);
+  };
+  vid.onended = vid.onerror = finish;
+  watchdog = setTimeout(finish, 7500);
+  vid.src = "open.mp4";
+  vid.play().catch(finish);
 }
 
 if (!key) {
-  // Без открытки: только тёмные врата и Стражник.
   show("gate"); dots.textContent = "";
-  panel.innerHTML = `<div class="inner"><div class="who">Стражник врат</div><h1>Врата закрыты</h1><div class="body"><p>Без зова их не открыть. Ступай с миром.</p></div></div>`;
+  if (oldCard) {
+    panel.innerHTML = `<div class="inner"><div class="who">Стражник врат</div><h1>Проверить открытку</h1><div class="body"><p>Эхо проверит, открыта ли тебе Тропа.</p></div><div class="actions"><button class="go" id="check-card">К Эху →</button></div></div>`;
+    $("check-card").onclick = () => openEcho(param);
+  } else {
+    panel.innerHTML = `<div class="inner"><div class="who">Стражник врат</div><h1>Врата закрыты</h1><div class="body"><p>Без зова их не открыть. Ступай с миром.</p></div></div>`;
+  }
 } else {
   echoVoice.preload = "auto";
   render();
+  // Подгрузить ролики заранее, чтобы переходы шли без пауз.
+  ["vision-1","vision-2","vision-3","vision-4","hand","open"].forEach((m) => { const l = document.createElement("link"); l.rel = "prefetch"; l.href = "" + m + ".mp4"; document.head.appendChild(l); });
 }
-// Подгрузить ролики заранее, чтобы переходы шли без пауз.
-["vision-1","vision-2","vision-3","vision-4","hand","open"].forEach((m) => { const l = document.createElement("link"); l.rel = "prefetch"; l.href = "" + m + ".mp4"; document.head.appendChild(l); });
 </script>
 </body>
 </html>
