@@ -3,7 +3,7 @@
 // Параметры адреса: ?edit=1 — режим правки раскладки, ?anim=0 — без анимаций.
 
 import { createKolo, gradeDay, koloDate, monthStats } from "./kolo.js";
-import { initQuests } from "./quests.js";
+import { initQuests, savedPeriodBonus } from "./quests.js";
 import { initAchievements } from "./achievements.js";
 import { initStats, powersBalance } from "./stats.js";
 import { initSkills, intellectOf, masteryNow } from "./skills.js";
@@ -467,7 +467,7 @@ function freshFlasks(data) {
 }
 
 function loadDailiesState(data) {
-  const fresh = { day: todayKey(), wallet: data.start.wallet, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3, stepsV: 2, picked: defaultPicks(data, []), open: [...(data.open?.start ?? [])] };
+  const fresh = { day: todayKey(), wallet: data.start.wallet, walletPaid: 0, earned: 0, flasks: freshFlasks(data), done: [], bought: [], closed: false, history: [], willTasks: {}, curveV: 3, stepsV: 2, picked: defaultPicks(data, []), open: [...(data.open?.start ?? [])] };
   let saved = null;
   try {
     saved = JSON.parse(window.localStorage.getItem(DAILIES_KEY) ?? "null");
@@ -487,8 +487,8 @@ function loadDailiesState(data) {
   saved.dayGains ??= {};
   saved.dayFlasks ??= {};
   saved.setGains ??= {};
-  // Старые дни уже зачислялись по каждой отметке.
-  saved.walletPaid ??= dayNet(saved);
+  // До появления cardsTaken опыт зачислялся сразу, а после него ждёт сдачи.
+  saved.walletPaid ??= Array.isArray(saved.cardsTaken) ? 0 : dayNet(saved);
   if (saved.pending) saved.pending.walletPaid ??= dayNet(saved.pending);
   // 26.10: «мои задания дня» — старым сохранениям: задания по умолчанию + то, что уже отмечено сегодня
   saved.picked ??= defaultPicks(data, saved.done);
@@ -1310,8 +1310,11 @@ function createDailies(box, ctx) {
   yday.append(ydayHead, el("p", "dailies-yday-hint", YD.hint ?? ""), ydayList);
   cols.append(yday);
   const ydayFoot = el("div", "dailies-yday-foot");
+  const ydayTotals = el("div", "dailies-yday-totals");
   const ydayCount = el("strong", "dailies-yday-count");
-  ydayCount.setAttribute("aria-live", "polite");
+  const ydayCredit = el("span", "dailies-yday-credit");
+  ydayTotals.setAttribute("aria-live", "polite");
+  ydayTotals.append(ydayCount, ydayCredit);
   const ydayRest = el("button", "dailies-yday-rest", YD.couldnt ?? "");
   ydayRest.type = "button";
   ydayRest.title = YD.couldntHint ?? "";
@@ -1319,7 +1322,7 @@ function createDailies(box, ctx) {
   const ydaySend = el("button", "dailies-submit dailies-yday-send", YD.send ?? "");
   ydaySend.type = "button";
   ydaySend.addEventListener("click", submitYesterday);
-  ydayFoot.append(ydayCount, ydayRest, ydaySend);
+  ydayFoot.append(ydayTotals, ydayRest, ydaySend);
   board.append(ydayFoot);
 
   const ydayLabel = (key) => {
@@ -1366,6 +1369,10 @@ function createDailies(box, ctx) {
     const marked = Object.keys(P.markedSets ?? {}).filter((id) => P.markedSets[id] > 0);
     const n = new Set([...P.done, ...(P.marked ?? []), ...marked]).size;
     ydayCount.textContent = fill(YD.count, { n, of: picked.length });
+    let extra = 0;
+    for (const { gain } of yesterdayAdditions(P)) extra += gain;
+    const credit = Math.max(0, dayNet(P) + extra - (P.walletPaid ?? 0));
+    ydayCredit.textContent = `${t.cards.walletResult} · ${credit} ${t.cards.exp}`;
   }
 
   function yesterdayRow(P, power, task) {
@@ -1416,10 +1423,7 @@ function createDailies(box, ctx) {
     actions.append(mark);
     return row;
   }
-  // сдать вчера: дописанные дела дают то же, что дали бы вчера (опыт, сила, Воля), плюс Воля за цвет дня
-  function submitYesterday() {
-    const P = state.pending;
-    if (!P) return;
+  function* yesterdayAdditions(P) {
     const fresh = new Set([...(P.marked ?? []), ...Object.keys(P.markedSets ?? {})]);
     for (const id of fresh) {
       const task = byId[id];
@@ -1429,6 +1433,15 @@ function createDailies(box, ctx) {
       const added = plan ? plan.gains.slice(original, original + (P.markedSets?.[id] ?? 0)) : P.done.includes(id) ? [] : [reward];
       if (!added.length) continue;
       const gain = added.reduce((sum, amount) => sum + amount, 0);
+      yield { id, task, plan, original, count: added.length, gain };
+    }
+  }
+
+  // сдать вчера: дописанные дела дают то же, что дали бы вчера (опыт, сила, Воля), плюс Воля за цвет дня
+  function submitYesterday() {
+    const P = state.pending;
+    if (!P) return;
+    for (const { id, task, plan, original, count, gain } of yesterdayAdditions(P)) {
       state.earned = (state.earned ?? 0) + gain;
       P.dayGains = { ...(P.dayGains ?? {}), [id]: (P.dayGains?.[id] ?? 0) + gain };
       if (data.flasks.includes(task.attr)) addFlask(task.attr, gain, false);
@@ -1436,9 +1449,9 @@ function createDailies(box, ctx) {
       if (first) P.done.push(id);
       if (plan) {
         P.sets ??= {};
-        P.sets[id] = original + added.length;
+        P.sets[id] = original + count;
       }
-      const will = (first ? W.perTask : 0) + (added.length - Number(first)) * (W.perSet ?? 1)
+      const will = (first ? W.perTask : 0) + (count - Number(first)) * (W.perSet ?? 1)
         + (plan && P.sets[id] === plan.gains.length ? W.hardBonus ?? 2 : 0);
       addFlask("will", will, false);
     }
@@ -1447,13 +1460,25 @@ function createDailies(box, ctx) {
     const dayWill = P.done.length ? W.day?.[grade] ?? 0 : 0;
     if (dayWill) addFlask("will", dayWill, false);
     P.willBonus = (P.willBonus ?? 0) + dayWill;
+    const balanceBefore = state.wallet;
     settleDayWallet(state, P, true);
+    const credited = Math.max(0, state.wallet - balanceBefore);
     state.history.push(dayRecord(P, data, "player"));
     state.history = state.history.slice(-400);
     state.pending = null;
     const M = ctx.texts.mail ?? {};
     const D = M.day?.[grade] ?? {};
-    postMail({ key: `day-${P.day}`, from: "mir", title: fill(YD.mailTitle, { date: ydayLabel(P.day) }), text: fill(YD.mailText, { n: P.done.length, will: dayWill }), parts: [{ t: "day", grade, gradeName: D.title, base: W.day?.[grade] ?? 0, half: W.day?.yellow ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0), balance: 0, total: dayWill, note: YD.mailNote }] });
+    postMail({
+      key: `day-${P.day}`,
+      from: "mir",
+      group: "yesterday",
+      title: fill(YD.mailTitle, { date: ydayLabel(P.day) }),
+      text: fill(YD.mailText, { n: P.done.length, will: dayWill }),
+      parts: [
+        { t: "day", grade, gradeName: D.title, base: W.day?.[grade] ?? 0, half: W.day?.yellow ?? 0, bonus: (W.day?.green ?? 0) - (W.day?.yellow ?? 0), balance: 0, total: dayWill, note: YD.mailNote },
+        expPart(credited, P),
+      ],
+    });
     toast(fill(YD.done, { will: dayWill }));
     board.classList.remove("yday-open");
     commit();
@@ -1618,9 +1643,9 @@ function createDailies(box, ctx) {
   }
 
   // В письмо попадает изменение кошелька именно при сдаче дня.
-  function expPart(credited) {
-    const earned = Object.values(state.dayGains ?? {}).reduce((a, b) => a + b, 0);
-    const spent = (state.bought ?? []).reduce((a, b) => a + b.price, 0);
+  function expPart(credited, day = state) {
+    const earned = Object.values(day.dayGains ?? {}).reduce((a, b) => a + b, 0);
+    const spent = (day.bought ?? []).reduce((a, b) => a + b.price, 0);
     return { t: "exp", earned, spent, hand: state.wallet, credited };
   }
 
@@ -1653,7 +1678,8 @@ function createDailies(box, ctx) {
     const earnedToday = Object.values(state.dayGains ?? {}).reduce((sum, amount) => sum + amount, 0);
     walletValue.textContent = String(earnedToday);
     walletResult.hidden = state.closed;
-    walletResultAmount.textContent = `${Math.max(0, dayNet(state) - (state.walletPaid ?? 0))} ${t.cards.exp}`;
+    const walletCredit = Math.max(0, dayNet(state) - (state.walletPaid ?? 0));
+    walletResultAmount.textContent = `${walletCredit} ${t.cards.exp}`;
     const doneCount = state.done.length;
     pathCount("day", doneCount, total);
     stripMeta.textContent = `${doneCount} ${t.of} ${total} · ${t.wallet.toLowerCase()} ${state.wallet}${state.closed ? " · ✓" : ""}${state.pending ? ` · ${t.yesterday?.strip ?? ""}` : ""}`;
@@ -1687,7 +1713,7 @@ function createDailies(box, ctx) {
     }
     buildWeak();
     buildYday();
-    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks, wallet: state.wallet, stored: state.stored ?? 0, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], steps: { ...(state.steps ?? {}) }, willBonus: state.willBonus ?? 0, openedAt: { ...(state.openedAt ?? {}) }, attrOf: attrMap, allTasks };
+    lastDailies = { done: doneCount, total, closed: state.closed, will: state.flasks.will, max, curve, willCurve, reward, tasks: activeTasks, doneIds: [...state.done], history: state.history, day: state.day, earned: state.earned ?? 0, flasks: state.flasks, start: data.start.flasks, wallet: state.wallet, walletCredit, stored: state.stored ?? 0, dayGains: { ...(state.dayGains ?? {}) }, bought: [...state.bought], steps: { ...(state.steps ?? {}) }, willBonus: state.willBonus ?? 0, openedAt: { ...(state.openedAt ?? {}) }, attrOf: attrMap, allTasks, periodBonuses: state.periodBonuses };
     document.dispatchEvent(new CustomEvent("hub:dailies", { detail: lastDailies }));
     board.classList.toggle("closed", state.closed);
     submit.disabled = state.closed;
@@ -1715,7 +1741,9 @@ function createDailies(box, ctx) {
       const best = p.best ? fillMail(P.best, { power: t.attrs[p.best] ?? p.best }) : "";
       const of = p.of;
       const bestName = p.best ? t.attrs[p.best] ?? p.best : "";
-      postMail({ key: p.key, from: "mir", title: P.title, text: fillMail(P.text, { ...p, best }), parts: [{ t: "period", kind: p.kind, days: p.days, of, green: p.green, done: p.done, xp: p.xp, best: p.best, bestName, note: P.note, koloMonth: Number(String(p.key).split("-")[2]) || koloDate().month }] });
+      const periodKey = p.key.slice(`k${p.kind}-`.length);
+      const bonus = savedPeriodBonus(p.kind, periodKey, ctx.quests?.[p.kind]?.bonus?.legacyExp);
+      postMail({ key: p.key, from: "mir", title: P.title, text: fillMail(P.text, { ...p, best }), parts: [{ t: "period", kind: p.kind, days: p.days, of, green: p.green, done: p.done, xp: p.xp, best: p.best, bestName, bonus, note: P.note, koloMonth: Number(String(p.key).split("-")[2]) || koloDate().month }] });
     }
   }
   periodMail();
@@ -1757,9 +1785,18 @@ function createDailies(box, ctx) {
 
   // бонус за неделю/месяц (quests.js) — опыт в кошелёк; при отмене — назад (в минус нельзя)
   document.addEventListener("hub:add-exp", (event) => {
-    const { amount, reason } = event.detail ?? {};
+    const { kind, amount, reason } = event.detail ?? {};
     if (!amount) return;
+    const before = state.wallet;
     state.wallet = Math.max(0, state.wallet + amount);
+    const applied = state.wallet - before;
+    if (applied && (kind === "week" || kind === "month")) {
+      const log = state.periodBonuses ??= {};
+      const day = log[state.day] ??= {};
+      day[kind] = (day[kind] ?? 0) + applied;
+      const dates = Object.keys(log);
+      if (dates.length > 400) delete log[dates[0]];
+    }
     state.earned = Math.max(0, (state.earned ?? 0) + amount);
     if (!submittingDay) toast(`${reason} ${amount > 0 ? "+" : "−"}${Math.abs(amount)}`);
     commit();

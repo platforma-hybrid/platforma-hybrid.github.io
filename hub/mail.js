@@ -54,8 +54,9 @@ function save() {
 export function addLetter(state, letter, day = todayKey()) {
   if (letter.key && state.keys.includes(letter.key)) return false;
   if (letter.key) state.keys = [...state.keys, letter.key].slice(-600);
-  // приветствие не съедает дневной лимит
-  const todays = letter.from === "world" ? [] : state.letters.filter((l) => l.day === day && l.key !== "welcome" && l.from !== "world");
+  // Сводка за вчера хранит своё начисление отдельно от сводки за сегодня.
+  const separate = (entry) => entry.from === "world" || entry.group === "yesterday";
+  const todays = separate(letter) ? [] : state.letters.filter((l) => l.day === day && l.key !== "welcome" && !separate(l));
   // одно событие одного рода за день — одним письмом (несколько новых уровней → «Новые уровни»)
   const same = letter.group && todays.find((l) => l.group === letter.group);
   // больше трёх в день — складываем в последнее письмо того же отправителя (или просто в последнее)
@@ -469,6 +470,7 @@ function periodCard(p, U) {
   head.append(el("span", "mail-card-title", p.kind === "month" ? U.month ?? "" : U.week ?? ""));
   card.append(head);
   card.append(line(U.daysWith, p.of ? `${p.days} ${U.of ?? "из"} ${p.of}` : String(p.days)), line(U.daysFull, String(p.green), "g-green"), line(U.tasks, String(p.done)), line(U.xp, sign(p.xp), "up"));
+  if (p.bonus > 0) card.append(line(p.kind === "month" ? U.bonusMonth : U.bonusWeek, `${sign(p.bonus)} ${U.expUnit}`, "up"));
   if (p.bestName) card.append(line(p.kind === "month" ? U.bestMonth : U.bestWeek, p.bestName, `best a-${p.best}`));
   if (p.note) card.append(el("p", "mail-card-note", p.note));
   if (p.koloMonth) {

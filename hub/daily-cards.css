@@ -722,7 +722,9 @@
   margin: 0;
   z-index: 2;
 }
+.dailies-yday-totals { display: grid; gap: 3px; align-content: center; }
 .dailies-yday-count { color: #efd199; font: 400 25px var(--font-text); }
+.dailies-yday-credit { color: #e9ca8b; font: 400 21px/1.12 var(--font-text); white-space: nowrap; }
 .modal-quests-day .dailies-yday-foot .dailies-yday-rest {
   justify-self: center;
   padding: 10px 14px;

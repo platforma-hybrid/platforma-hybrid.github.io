@@ -171,19 +171,37 @@ export function initWallet(box, ctx, getDailies) {
     const reward = d?.reward ?? 5;
     // сегодня — по живым данным, дальше — история (новые к старым), 30 дней
     const today = { day: d?.day, gains: d?.dayGains ?? {}, bought: d?.bought ?? [] };
-    const days = [today, ...[...(d?.history ?? [])].reverse()].slice(0, 30);
     const todayN = d?.day ? dayNum(d.day) : 0;
+    const bonusDays = new Map(Object.entries(d?.periodBonuses ?? {}).map(([key, bonuses]) => [dayNum(key), { day: key, bonuses }]));
+    const previous = new Map((d?.history ?? []).map((day) => [dayNum(day.day), day]));
+    for (const [number, { day }] of bonusDays) {
+      if (number !== todayN && !previous.has(number)) previous.set(number, { day });
+    }
+    previous.delete(todayN);
+    const days = [today, ...[...previous.entries()].sort(([a], [b]) => b - a).map(([, day]) => day)].slice(0, 30);
     let weekIn = 0;
     let weekOut = 0;
+    let weekBonus = 0;
     for (const rec of days) {
-      const rows = dayRows(rec, T.rows ?? {}, reward);
-      const n = rec.day ? todayN - dayNum(rec.day) : 0;
-      if (n < 7) for (const r of rows) r.amount > 0 ? (weekIn += r.amount) : (weekOut -= r.amount);
+      const daily = dayRows(rec, T.rows ?? {}, reward);
+      const number = rec.day ? dayNum(rec.day) : todayN;
+      const n = todayN - number;
+      const bonuses = bonusDays.get(number)?.bonuses;
+      const bonusRows = Object.entries(bonuses ?? {}).filter(([, amount]) => amount)
+        .map(([kind, amount]) => ({ amount, label: T.rows?.bonuses?.[kind] ?? "" }));
+      if (n >= 0 && n < 7) {
+        for (const r of daily) r.amount > 0 ? (weekIn += r.amount) : (weekOut -= r.amount);
+        weekBonus += bonusRows.reduce((sum, r) => sum + r.amount, 0);
+      }
+      const rows = [...daily, ...bonusRows];
       if (!rows.length && rec !== today) continue;
       const block = el("div", "wallet-day");
       const total = rows.reduce((s, r) => s + r.amount, 0);
       const head = el("div", "wallet-day-head");
-      head.append(el("span", "", n === 0 ? T.today : n === 1 ? T.yesterday : fill(T.daysAgo, { n })), el("span", "wallet-day-total", `${T.total} ${sign(total)}`));
+      const awaitingCredit = rec === today && d?.closed === false && daily.length > 0 && Number.isFinite(d.walletCredit) && Boolean(T.dayCredit);
+      const balanceLabel = awaitingCredit ? fill(T.dayCredit, { n: d.walletCredit }) : `${T.total} ${sign(total)}`;
+      const balanceClass = awaitingCredit ? "wallet-day-total wallet-day-credit" : "wallet-day-total";
+      head.append(el("span", "", n === 0 ? T.today : n === 1 ? T.yesterday : fill(T.daysAgo, { n })), el("span", balanceClass, balanceLabel));
       block.append(head);
       if (!rows.length) block.append(el("p", "wallet-empty", T.emptyToday));
       for (const r of rows) {
@@ -191,6 +209,7 @@ export function initWallet(box, ctx, getDailies) {
         row.append(el("b", r.amount > 0 ? "up" : "down", sign(r.amount)), el("span", "", r.label));
         block.append(row);
       }
+      if (awaitingCredit) block.append(el("p", "wallet-day-credit-hint", T.dayCreditHint));
       hist.append(block);
     }
     const week = el("div", "wallet-card");
@@ -200,7 +219,9 @@ export function initWallet(box, ctx, getDailies) {
       r.append(el("span", "", label), el("b", cls, value));
       return r;
     };
-    week.append(line(T.weekIn, sign(weekIn), "up"), line(T.weekOut, weekOut ? `−${weekOut}` : "0", "down"), line(T.fund, "0", "store"));
+    week.append(line(T.weekIn, sign(weekIn), "up"));
+    if (weekBonus) week.append(line(T.weekBonus, sign(weekBonus), weekBonus > 0 ? "up" : "down"));
+    week.append(line(T.weekOut, weekOut ? `−${weekOut}` : "0", "down"), line(T.fund, "0", "store"));
     const spend = el("div", "wallet-card");
     spend.append(el("span", "wallet-card-title", T.spendTitle));
     for (const [label, value, on] of T.spendList ?? []) {

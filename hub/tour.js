@@ -1,20 +1,31 @@
 // Мини-обучение: при первом входе — несколько подсказок по экрану, по одной, с подсветкой места.
 // Тексты — hub.texts.json → tour. Показ: первый вход (метка в браузере), ?tour=1 — показать снова; кнопка «?» в углу — тоже.
 
+import { isPhone } from "./phone.js";
+
 const DONE_KEY = "hub.tour.v1";
 
 // Где подсвечивать: селектор (или несколько — берётся общая рамка). Пусто — подсказка по центру, без подсветки.
 const TARGETS = {
   welcome: [],
-  kolo: [".kolo-rim", ".ph-kolo-svg"],
-  // .ph-* — панель телефона (phone.js): на телефоне доски сцены скрыты, подсвечиваем её кнопки
-  dailies: ['[data-id="dailies"]', ".ph-dailies"],
-  today: [".kolo-today", ".ph-today"],
-  wallet: [".wallet-plank", ".ph-wallet"],
-  mail: [".mail-button", ".ph-right .ph-icon"],
-  menu: [".kolo-menu-item", ".ph-menu-item"],
+  kolo: [".kolo-rim"],
+  dailies: ['[data-id="dailies"]'],
+  today: [".kolo-today"],
+  wallet: [".wallet-plank"],
+  mail: [".mail-button"],
+  menu: [".kolo-menu-item"],
   book: ['[data-id="book"]', '[data-id="figure"]'],
   planet: ['[data-id="planet"]'],
+};
+
+const PHONE_TARGETS = {
+  kolo: [".ph-kolo-svg"],
+  dailies: [".ph-dailies"],
+  today: [".ph-today"],
+  wallet: [".ph-wallet"],
+  mail: [".ph-right .ph-icon"],
+  menu: [".ph-menu-item"],
+  book: ['[data-id="book"]'],
 };
 
 function rectOf(selectors) {
@@ -50,12 +61,19 @@ export function initTour(ctx) {
 
   let layer = null;
   let index = 0;
+  let resizeFrame = 0;
+
+  function onResize() {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(place);
+  }
 
   const close = () => {
     remember();
     layer?.remove();
     layer = null;
-    window.removeEventListener("resize", place);
+    cancelAnimationFrame(resizeFrame);
+    window.removeEventListener("resize", onResize);
     window.removeEventListener("keydown", onKey);
   };
 
@@ -73,26 +91,35 @@ export function initTour(ctx) {
     const step = t.steps[index];
     const hole = layer.querySelector(".tour-hole");
     const card = layer.querySelector(".tour-card");
-    const box = rectOf(TARGETS[step.target] ?? []);
-    const W = window.innerWidth, H = window.innerHeight, pad = 10;
-    if (box === null) {
-      hole.classList.add("none");
-      card.style.left = `${Math.max(16, (W - card.offsetWidth) / 2)}px`;
-      card.style.top = `${Math.max(16, (H - card.offsetHeight) / 2)}px`;
-      return;
+    const phone = isPhone();
+    const selectors = (phone ? PHONE_TARGETS[step.target] : undefined) ?? TARGETS[step.target] ?? [];
+    const target = rectOf(selectors);
+    const { innerWidth: width, innerHeight: height } = window;
+    const { width: cardWidth, height: cardHeight } = card.getBoundingClientRect();
+    const margin = phone ? 12 : 16;
+    const clamp = (offset, space) => Math.max(margin, Math.min(offset, space - margin));
+    let position;
+    if (target) {
+      const pad = 10, gap = phone ? 10 : 12;
+      const left = Math.max(0, target.l - pad), right = Math.min(width, target.r + pad);
+      const top = Math.max(0, target.t - pad), bottom = Math.min(height, target.b + pad);
+      const centerX = (left + right - cardWidth) / 2, centerY = (top + bottom - cardHeight) / 2;
+      const alignX = phone ? left : centerX;
+      const sides = [[right + gap, centerY], [left - gap - cardWidth, centerY]];
+      const below = [alignX, bottom + gap], above = [alignX, top - gap - cardHeight];
+      const choices = phone && step.target === "dailies" ? [below, ...sides, above] : [...sides, below, above];
+      position = choices
+        .map(([x, y]) => [clamp(x, width - cardWidth), clamp(y, height - cardHeight)])
+        .find(([x, y]) => x >= right || x + cardWidth <= left || y >= bottom || y + cardHeight <= top);
+      if (position) {
+        Object.assign(hole.style, { left: `${left}px`, top: `${top}px`, width: `${right - left}px`, height: `${bottom - top}px` });
+      }
     }
-    hole.classList.remove("none");
-    Object.assign(hole.style, { left: `${box.l - pad}px`, top: `${box.t - pad}px`, width: `${box.r - box.l + pad * 2}px`, height: `${box.b - box.t + pad * 2}px` });
-    // Карточка — с той стороны, где больше места; не вылезает за экран.
-    const cw = card.offsetWidth, ch = card.offsetHeight, gap = 22;
-    const room = { right: W - box.r, left: box.l, below: H - box.b, above: box.t };
-    let x, y;
-    if (room.right >= cw + gap * 2) { x = box.r + gap; y = (box.t + box.b) / 2 - ch / 2; }
-    else if (room.left >= cw + gap * 2) { x = box.l - gap - cw; y = (box.t + box.b) / 2 - ch / 2; }
-    else if (room.below >= ch + gap * 2) { x = (box.l + box.r) / 2 - cw / 2; y = box.b + gap; }
-    else { x = (box.l + box.r) / 2 - cw / 2; y = box.t - gap - ch; }
-    card.style.left = `${Math.min(Math.max(16, x), W - cw - 16)}px`;
-    card.style.top = `${Math.min(Math.max(16, y), H - ch - 16)}px`;
+    // Когда свободной стороны нет, показываем текст по центру без рамки под карточкой.
+    hole.classList.toggle("none", !position);
+    const [x, y] = position ?? [(width - cardWidth) / 2, (height - cardHeight) / 2];
+    card.style.left = `${x}px`;
+    card.style.top = `${y}px`;
   }
 
   function show() {
@@ -150,9 +177,10 @@ export function initTour(ctx) {
     // Клик мимо карточки ничего не делает: подсказку закрывают «Пропустить» или последняя кнопка.
     layer.addEventListener("click", (event) => event.stopPropagation());
     document.body.append(layer);
-    window.addEventListener("resize", place);
+    window.addEventListener("resize", onResize);
     window.addEventListener("keydown", onKey);
     show();
+    document.fonts.ready.then(place);
   }
 
   help.addEventListener("click", open);

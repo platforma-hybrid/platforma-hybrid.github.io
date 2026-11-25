@@ -31,6 +31,14 @@ function load() {
     return {};
   }
 }
+
+export function savedPeriodBonus(kind, key, legacyExp) {
+  const state = load();
+  const current = state[kind];
+  if (current?.key === key) return current.bonusAmount ?? (current.bonusGiven ? legacyExp : 0);
+  return state.history?.findLast((period) => period.kind === kind && period.key === key)?.bonusAmount;
+}
+
 function save(state) {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(state));
@@ -46,7 +54,9 @@ function roll(state) {
     if (state[kind]?.key !== keys[kind]) {
       if (state[kind]) {
         state.history ??= [];
-        state.history.push({ kind, key: state[kind].key, manual: state[kind].manual, bonus: state[kind].bonusGiven });
+        const previous = state[kind];
+        const bonusAmount = previous.bonusAmount ?? (previous.bonusGiven ? undefined : 0);
+        state.history.push({ kind, key: previous.key, manual: previous.manual, bonus: previous.bonusGiven, bonusAmount });
         state.history = state.history.slice(-100);
       }
       state[kind] = { key: keys[kind], manual: [], bonusGiven: false };
@@ -145,7 +155,7 @@ export function initQuests(ctx, getDailies) {
       current.bonusGiven = all;
       current.bonusAmount = target;
       if (!all) current.legacyBonus = false;
-      if (amount) changes.push({ amount, reason: amount > 0 ? t.bonusToast[kind] : t.bonusBack });
+      if (amount) changes.push({ kind, amount, reason: amount > 0 ? t.bonusToast[kind] : t.bonusBack });
     }
     save(state);
     for (const detail of changes) document.dispatchEvent(new CustomEvent("hub:add-exp", { detail }));
